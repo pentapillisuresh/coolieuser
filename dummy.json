@@ -1,0 +1,277 @@
+[
+    {
+        "Services": [Array
+        ],
+        "createdAt": "2026-06-25T06:13:22.000Z",
+        "deletedAt": null,
+        "description": "Waxing, threading, facials, hair, massage, laser",
+        "icon": "Venus",
+        "id": 1,
+        "image": "https://picsum.photos/seed/women-salon/400/300",
+        "isActive": true,
+        "name": "Women's Salon & Spa",
+        "slug": "women-salon-spa",
+        "sortOrder": 1,
+        "updatedAt": "2026-06-25T06:13:22.000Z"
+    },
+    {
+        "Services": [Array
+        ],
+        "createdAt": "2026-06-25T06:13:22.000Z",
+        "deletedAt": null,
+        "description": "Haircuts, beard, shaving, facials, massages",
+        "icon": "Mars",
+        "id": 2,
+        "image": "https://picsum.photos/seed/men-salon/400/300",
+        "isActive": true,
+        "name": "Men's Salon & Grooming",
+        "slug": "men-salon-grooming",
+        "sortOrder": 2,
+        "updatedAt": "2026-06-25T06:13:22.000Z"
+    },
+    {
+        "Services": [Array
+        ],
+        "createdAt": "2026-06-25T06:13:22.000Z",
+        "deletedAt": null,
+        "description": "AC, RO, washing machine, refrigerator, microwave",
+        "icon": "Wrench",
+        "id": 3,
+        "image": "https://picsum.photos/seed/appliance/400/300",
+        "isActive": true,
+        "name": "Appliance Repair & Service",
+        "slug": "appliance-repair-service",
+        "sortOrder": 3,
+        "updatedAt": "2026-06-25T06:13:22.000Z"
+    },
+    {
+        "Services": [Array
+        ],
+        "createdAt": "2026-06-25T06:13:22.000Z",
+        "deletedAt": null,
+        "description": "Deep cleaning, upholstery, pest control",
+        "icon": "Sparkles",
+        "id": 4,
+        "image": "https://picsum.photos/seed/cleaning/400/300",
+        "isActive": true,
+        "name": "Cleaning & Pest Control",
+        "slug": "cleaning-pest-control",
+        "sortOrder": 4,
+        "updatedAt": "2026-06-25T06:13:22.000Z"
+    },
+    {
+        "Services": [Array
+        ],
+        "createdAt": "2026-06-25T06:13:22.000Z",
+        "deletedAt": null,
+        "description": "Electrician, plumber, carpenter",
+        "icon": "Hammer",
+        "id": 5,
+        "image": "https://picsum.photos/seed/handyman/400/300",
+        "isActive": true,
+        "name": "Home Repairs & Handyman",
+        "slug": "home-repairs-handyman",
+        "sortOrder": 5,
+        "updatedAt": "2026-06-25T06:13:22.000Z"
+    },
+    {
+        "Services": [Array
+        ],
+        "createdAt": "2026-06-25T06:13:22.000Z",
+        "deletedAt": null,
+        "description": "Painting, waterproofing, wall paneling",
+        "icon": "PaintRoller",
+        "id": 6,
+        "image": "https://picsum.photos/seed/renovation/400/300",
+        "isActive": true,
+        "name": "Home Renovations & Wall Makeovers",
+        "slug": "home-renovations-wall-makeovers",
+        "sortOrder": 6,
+        "updatedAt": "2026-06-25T06:13:22.000Z"
+    },
+    {
+        "Services": [Array
+        ],
+        "createdAt": "2026-06-25T06:13:22.000Z",
+        "deletedAt": null,
+        "description": "Luggage carrying, loading/unloading, hand carts",
+        "icon": "TrainFront",
+        "id": 7,
+        "image": "https://picsum.photos/seed/transport/400/300",
+        "isActive": true,
+        "name": "Transport Hubs (Railways & Bus)",
+        "slug": "transport-hubs-railways-bus",
+        "sortOrder": 7,
+        "updatedAt": "2026-06-25T06:13:22.000Z"
+    },
+    {
+        "Services": [Array
+        ],
+        "createdAt": "2026-06-25T06:13:22.000Z",
+        "deletedAt": null,
+        "description": "Freight unloading, pallet stacking, loading",
+        "icon": "Package",
+        "id": 8,
+        "image": "https://picsum.photos/seed/warehouse/400/300",
+        "isActive": true,
+        "name": "Warehousing & Logistics",
+        "slug": "warehousing-logistics",
+        "sortOrder": 8,
+        "updatedAt": "2026-06-25T06:13:22.000Z"
+    },
+    {
+        "Services": [Array
+        ],
+        "createdAt": "2026-06-25T06:13:22.000Z",
+        "deletedAt": null,
+        "description": "Brickwork, plastering, tiling, demolition",
+        "icon": "Construction",
+        "id": 9,
+        "image": "https://picsum.photos/seed/construction/400/300",
+        "isActive": true,
+        "name": "Construction & Site Material",
+        "slug": "construction-site-material",
+        "sortOrder": 9,
+        "updatedAt": "2026-06-25T06:13:22.000Z"
+    },
+    {
+        "Services": [Array
+        ],
+        "createdAt": "2026-06-25T06:13:22.000Z",
+        "deletedAt": null,
+        "description": "Furniture lifting, appliance moving, packing",
+        "icon": "Truck",
+        "id": 10,
+        "image": "https://picsum.photos/seed/moving/400/300",
+        "isActive": true,
+        "name": "Domestic Moving & Shifting",
+        "slug": "domestic-moving-shifting",
+        "sortOrder": 10,
+        "updatedAt": "2026-06-25T06:13:22.000Z"
+    },
+    {
+        "Services": [Array
+        ],
+        "createdAt": "2026-06-25T06:13:22.000Z",
+        "deletedAt": null,
+        "description": "Pipeline cleaning, septic tank, manhole maintenance",
+        "icon": "Droplet",
+        "id": 11,
+        "image": "https://picsum.photos/seed/sewage/400/300",
+        "isActive": true,
+        "name": "Sewage & Drainage",
+        "slug": "sewage-drainage",
+        "sortOrder": 11,
+        "updatedAt": "2026-06-25T06:13:22.000Z"
+    },
+    {
+        "Services": [Array
+        ],
+        "createdAt": "2026-06-25T06:13:22.000Z",
+        "deletedAt": null,
+        "description": "Landscaping, plant care, soil management, pest control",
+        "icon": "Sprout",
+        "id": 12,
+        "image": "https://picsum.photos/seed/garden/400/300",
+        "isActive": true,
+        "name": "Garden Setup & Maintenance",
+        "slug": "garden-setup-maintenance",
+        "sortOrder": 12,
+        "updatedAt": "2026-06-25T06:13:22.000Z"
+    },
+    {
+        "Services": [Array
+        ],
+        "createdAt": "2026-06-25T06:13:22.000Z",
+        "deletedAt": null,
+        "description": "Land preparation, sowing, irrigation, harvesting",
+        "icon": "Tractor",
+        "id": 13,
+        "image": "https://picsum.photos/seed/farming/400/300",
+        "isActive": true,
+        "name": "Farming & Agriculture",
+        "slug": "farming-agriculture",
+        "sortOrder": 13,
+        "updatedAt": "2026-06-25T06:13:22.000Z"
+    }
+],
+"success": true
+}
+
+category: [
+{
+    "basePrice": "299.00",
+    "categoryId": 1,
+    "createdAt": "2026-06-25T06:13:22.000Z",
+    "deletedAt": null,
+    "description": "Standard waxing",
+    "duration": 30,
+    "id": 1,
+    "image": "https://picsum.photos/seed/waxing/200/150",
+    "isActive": true,
+    "metadata": null,
+    "name": "Waxing (Regular)",
+    "slug": "waxing-regular",
+    "updatedAt": "2026-06-25T06:13:22.000Z"
+},
+{
+    "basePrice": "499.00",
+    "categoryId": 1,
+    "createdAt": "2026-06-25T06:13:22.000Z",
+    "deletedAt": null,
+    "description": "Luxury chocolate wax",
+    "duration": 45,
+    "id": 2,
+    "image": "https://picsum.photos/seed/chocolate-wax/200/150",
+    "isActive": true,
+    "metadata": null,
+    "name": "Chocolate Waxing",
+    "slug": "chocolate-waxing",
+    "updatedAt": "2026-06-25T06:13:22.000Z"
+},
+{
+    "basePrice": "99.00",
+    "categoryId": 1,
+    "createdAt": "2026-06-25T06:13:22.000Z",
+    "deletedAt": null,
+    "description": "Eyebrow and upper lip threading",
+    "duration": 15,
+    "id": 3,
+    "image": "https://picsum.photos/seed/threading/200/150",
+    "isActive": true,
+    "metadata": null,
+    "name": "Threading",
+    "slug": "threading",
+    "updatedAt": "2026-06-25T06:13:22.000Z"
+},
+{
+    "basePrice": "399.00",
+    "categoryId": 1,
+    "createdAt": "2026-06-25T06:13:22.000Z",
+    "deletedAt": null,
+    "description": "Basic facial treatment",
+    "duration": 60,
+    "id": 4,
+    "image": "https://picsum.photos/seed/classic-facial/200/150",
+    "isActive": true,
+    "metadata": null,
+    "name": "Classic Facial",
+    "slug": "classic-facial",
+    "updatedAt": "2026-06-25T06:13:22.000Z"
+},
+{
+    "basePrice": "350.00",
+    "categoryId": 1,
+    "createdAt": "2026-06-25T06:13:22.000Z",
+    "deletedAt": null,
+    "description": "Professional haircut",
+    "duration": 30,
+    "id": 5,
+    "image": "https://picsum.photos/seed/haircut/200/150",
+    "isActive": true,
+    "metadata": null,
+    "name": "Haircut & Styling",
+    "slug": "haircut-styling",
+    "updatedAt": "2026-06-25T06:13:22.000Z"
+}
+]
