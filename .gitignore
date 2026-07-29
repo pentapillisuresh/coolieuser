@@ -42,3 +42,5 @@ app-example
 .metro-virtual/*
 
 caches/*
+google-services.
+GoogleService-Info.plist
