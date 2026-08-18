@@ -1,81 +1,211 @@
-import { View, Text, ScrollView, TouchableOpacity, Alert, StatusBar } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  StatusBar,
+  ActivityIndicator,
+  TextInput,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Icon from "react-native-vector-icons/Feather";
 import Icon2 from "react-native-vector-icons/MaterialIcons";
 import Icon3 from "react-native-vector-icons/FontAwesome5";
-import { CATEGORIES, getPriceBreakdown } from "../../data/dummy";
+import { createBooking } from "../../../services/api/booking";
+import { verifyCoupon } from "../../../services/api/promotions";
+
+// ─── Helper for price breakdown ──────────────────────────────────
+const getPriceBreakdown = (base, discount = 0) => {
+  const platformFee = Math.round(base * 0.05);
+  const gst = Math.round((base + platformFee) * 0.18);
+  const total = base + platformFee + gst - discount;
+  return { base, platform_fee: platformFee, gst, discount, total };
+};
 
 export default function BookingSummaryScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams();
-  
-  console.log('BookingSummary - Received params:', params);
-  
+  const [specialInstructions, setSpecialInstructions] = useState("");
+  // ─── Parse payload ──────────────────────────────────────────────
+  let payload = null;
+  try {
+    if (params.bookingPayload) {
+      payload = JSON.parse(params.bookingPayload);
+    }
+  } catch (e) {
+    console.error("Failed to parse booking payload:", e);
+  }
+// Function to geocode an address using Nominatim
+async function geocodeAddress(address) {
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`;
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Coolie/1.0' // Required by Nominatim's usage policy[reference:3]
+      }
+    });
+    const data = await response.json();
+
+    if (data && data.length > 0) {
+      return {
+        latitude: parseFloat(data[0].lat),
+        longitude: parseFloat(data[0].lon),
+        displayName: data[0].display_name
+      };
+    } else {
+      return null; // Address not found
+    }
+  } catch (error) {
+    console.error("Geocoding error:", error);
+    return null;
+  }
+}
+
+
+// Usage example:
+  // ─── Fallback if payload is missing ────────────────────────────
+  if (!payload) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 20 }}>
+        <Text style={{ fontSize: 16, color: "#6B7280", textAlign: "center" }}>
+          No booking data found. Please go back and try again.
+        </Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16 }}>
+          <Text style={{ color: "#17381B", fontWeight: "600" }}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   const {
     categoryId,
     categoryName,
+    serviceId,
     serviceName,
-    servicePrice,
-    date,
-    time,
+    servicePrice = 0,
+    scheduledDate,
+    scheduledTime,
     address,
-  } = params;
-  
-  const cat = CATEGORIES.find((c) => c.id === categoryId) || CATEGORIES[0];
-  const price = parseInt(servicePrice) || 200;
-  const breakdown = getPriceBreakdown(price);
+    bookingType,
+    details = {},
+  } = payload;
 
-  const handleConfirm = () => {
-    // Create a clean params object with all required data
-    const bookingParams = {
-      categoryId: categoryId || '',
-      categoryName: categoryName || '',
-      serviceName: serviceName || '',
-      servicePrice: servicePrice || '0',
-      date: date || 'Today',
-      time: time || '10:00 AM',
-      address: address || '42, MG Road, Hyderabad',
-    };
-    
-    console.log('Attempting to navigate to workers with params:', bookingParams);
-    
-    // Try multiple navigation methods
-    try {
-      // Method 1: Using push with pathname
-      router.push({
-        pathname: "/booking/workers",
-        params: bookingParams
-      });
-    } catch (error1) {
-      console.log('Method 1 failed:', error1);
-      try {
-        // Method 2: Using navigate
-        router.navigate({
-          pathname: "/booking/workers",
-          params: bookingParams
-        });
-      } catch (error2) {
-        console.log('Method 2 failed:', error2);
-        try {
-          // Method 3: Using replace
-          router.replace({
-            pathname: "/booking/workers",
-            params: bookingParams
-          });
-        } catch (error3) {
-          console.log('Method 3 failed:', error3);
-          // Method 4: Using href string
-          const queryString = Object.keys(bookingParams)
-            .map(key => `${key}=${encodeURIComponent(bookingParams[key])}`)
-            .join('&');
-          router.push(`/booking/workers?${queryString}`);
-        }
+  // ─── State ──────────────────────────────────────────────────────
+  const [loading, setLoading] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState(0);
+  const [promotionId, setPromotionId] = useState(null);
+  const [isApplying, setIsApplying] = useState(false);
+  const [couponMessage, setCouponMessage] = useState(null);
+  const [couponError, setCouponError] = useState(null);
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
+
+  const basePrice = Number(servicePrice) || 0;
+  const breakdown = getPriceBreakdown(basePrice, appliedDiscount);
+
+  useEffect(()=>{
+    const getLocation=async ()=>{
+      const location = await geocodeAddress(address);
+      if (location) {
+        setLongitude(location.longitude);
+        setLatitude(location.latitude);
+        console.log(location.latitude, location.longitude);
       }
+    }
+    getLocation();
+  },[address])
+  // ─── Handle coupon application ──────────────────────────────────
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError("Please enter a coupon code");
+      return;
+    }
+
+    setIsApplying(true);
+    setCouponError(null);
+    setCouponMessage(null);
+
+    try {
+      const response = await verifyCoupon(couponCode.trim());
+      if (response.data?.valid) {
+        let discountAmount = 0;
+        if (response.data.discountType === "percentage") {
+          discountAmount = Math.round((basePrice * response.data.discountValue) / 100);
+        } else {
+          discountAmount = response.data.discountValue;
+        }
+        setAppliedDiscount(discountAmount);
+        setPromotionId(response.data.promotionId || null);
+        setCouponMessage(response.data.message || "Coupon applied successfully!");
+        setCouponError(null);
+      } else {
+        setCouponError(response.data?.message || "Invalid coupon code");
+        setAppliedDiscount(0);
+        setPromotionId(null);
+        setCouponMessage(null);
+      }
+    } catch (error) {
+      setCouponError(error.message || "Failed to verify coupon");
+      setAppliedDiscount(0);
+      setPromotionId(null);
+      setCouponMessage(null);
+    } finally {
+      setIsApplying(false);
     }
   };
 
+  const handleRemoveCoupon = () => {
+    setCouponCode("");
+    setAppliedDiscount(0);
+    setPromotionId(null);
+    setCouponMessage(null);
+    setCouponError(null);
+  };
+
+  // ─── Handle confirm booking ────────────────────────────────────
+  const handleConfirm = async () => {
+    setLoading(true);
+    try {
+      const bookingData = {
+        serviceId: Number(serviceId),
+        address: address || "Address not provided",
+        scheduledDate: scheduledDate || new Date().toISOString().split("T")[0],
+        scheduledTime: scheduledTime || "10:00 AM",
+        specialInstructions,
+        latitude,
+        longitude,
+        details: {
+          ...details,
+          bookingType,
+          categoryName,
+          serviceName,
+          ...(promotionId && { promotionId }),
+        },
+        totalAmount: breakdown.total,
+      };
+
+      const response = await createBooking(bookingData);
+      Alert.alert("Success", "Booking created successfully!");
+
+      router.push({
+        pathname: "/booking/confirmation",
+        params: { bookingId: response.data.id.toString() },
+      });
+    } catch (error) {
+      console.error("Booking creation failed:", error);
+      Alert.alert("Error", error.message || "Failed to create booking. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─── UI helpers ─────────────────────────────────────────────────
   const Row = ({ label, value, bold, accent }) => (
     <View
       style={{
@@ -111,8 +241,8 @@ export default function BookingSummaryScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: "#F3F8EF" }}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      
-      {/* Header - No Gradient */}
+
+      {/* Header */}
       <View
         style={{
           backgroundColor: "#17381B",
@@ -178,17 +308,15 @@ export default function BookingSummaryScreen() {
                 width: 58,
                 height: 58,
                 borderRadius: 16,
-                backgroundColor: cat.bg || "#E8F5E9",
+                backgroundColor: "#E8F5E9",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Text style={{ fontSize: 28 }}>{cat.emoji || "📋"}</Text>
+              <Text style={{ fontSize: 28 }}>📋</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text
-                style={{ fontSize: 18, fontWeight: "900", color: "#1F2937" }}
-              >
+              <Text style={{ fontSize: 18, fontWeight: "900", color: "#1F2937" }}>
                 {serviceName || "Service"}
               </Text>
               <Text style={{ fontSize: 13, color: "#6B7280", marginTop: 2 }}>
@@ -223,11 +351,8 @@ export default function BookingSummaryScreen() {
               }}
             >
               <Icon name="map-pin" size={16} color="#17381B" />
-              <Text
-                style={{ fontSize: 14, color: "#1F2937", flex: 1 }}
-                numberOfLines={1}
-              >
-                {address || "42, MG Road, Hyderabad"}
+              <Text style={{ fontSize: 14, color: "#1F2937", flex: 1 }} numberOfLines={1}>
+                {address || "Address not provided"}
               </Text>
             </View>
             <View style={{ flexDirection: "row", gap: 10 }}>
@@ -243,14 +368,8 @@ export default function BookingSummaryScreen() {
                 }}
               >
                 <Icon2 name="calendar-today" size={16} color="#17381B" />
-                <Text
-                  style={{
-                    fontSize: 13,
-                    color: "#1F2937",
-                    fontWeight: "600",
-                  }}
-                >
-                  {date || "Today"}
+                <Text style={{ fontSize: 13, color: "#1F2937", fontWeight: "600" }}>
+                  {scheduledDate || "Today"}
                 </Text>
               </View>
               <View
@@ -265,17 +384,95 @@ export default function BookingSummaryScreen() {
                 }}
               >
                 <Icon name="clock" size={16} color="#17381B" />
-                <Text
-                  style={{
-                    fontSize: 13,
-                    color: "#1F2937",
-                    fontWeight: "600",
-                  }}
-                >
-                  {time || "10:00 AM"}
+                <Text style={{ fontSize: 13, color: "#1F2937", fontWeight: "600" }}>
+                  {scheduledTime || "10:00 AM"}
                 </Text>
               </View>
             </View>
+          </View>
+        </View>
+
+        {/* Coupon Section */}
+        <View
+          style={{
+            backgroundColor: "#FFFFFF",
+            borderRadius: 18,
+            padding: 16,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.05,
+            shadowRadius: 8,
+            elevation: 3,
+          }}
+        >
+          <Text style={{ fontSize: 14, fontWeight: "700", color: "#1F2937", marginBottom: 8 }}>
+            Have a coupon?
+          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <TextInput
+                style={{
+                  backgroundColor: "#F3F8EF",
+                  borderRadius: 12,
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                  fontSize: 14,
+                  color: "#1F2937",
+                  borderWidth: 1.5,
+                  borderColor: couponError ? "#DC2626" : "#E5E7EB",
+                  height: 44,
+                }}
+                placeholder="Enter coupon code"
+                placeholderTextColor="#9CA3AF"
+                value={couponCode}
+                onChangeText={setCouponCode}
+                editable={!isApplying && appliedDiscount === 0}
+              />
+              {couponError && (
+                <Text style={{ fontSize: 12, color: "#DC2626", marginTop: 4 }}>
+                  {couponError}
+                </Text>
+              )}
+              {couponMessage && (
+                <Text style={{ fontSize: 12, color: "#16A34A", marginTop: 4 }}>
+                  {couponMessage}
+                </Text>
+              )}
+            </View>
+            {appliedDiscount > 0 ? (
+              <TouchableOpacity
+                onPress={handleRemoveCoupon}
+                style={{
+                  backgroundColor: "#DC2626",
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  height: 44,
+                  justifyContent: "center",
+                }}
+              >
+                <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 14 }}>Remove</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={handleApplyCoupon}
+                disabled={isApplying}
+                style={{
+                  backgroundColor: isApplying ? "#9CA3AF" : "#17381B",
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  height: 44,
+                  justifyContent: "center",
+                }}
+              >
+                {isApplying ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 14 }}>Apply</Text>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -292,24 +489,15 @@ export default function BookingSummaryScreen() {
             elevation: 4,
           }}
         >
-          <Text
-            style={{
-              fontSize: 16,
-              fontWeight: "800",
-              color: "#1F2937",
-              marginBottom: 4,
-            }}
-          >
+          <Text style={{ fontSize: 16, fontWeight: "800", color: "#1F2937", marginBottom: 4 }}>
             Price Breakdown
           </Text>
           <Row label="Base Service Charge" value={`₹${breakdown.base}`} />
           <Row label="Platform Fee (5%)" value={`₹${breakdown.platform_fee}`} />
           <Row label="GST (18%)" value={`₹${breakdown.gst}`} />
-          <Row
-            label="Discount (KOOLI50)"
-            value={`-₹${breakdown.discount}`}
-            accent={true}
-          />
+          {appliedDiscount > 0 && (
+            <Row label="Discount Applied" value={`-₹${appliedDiscount}`} accent={true} />
+          )}
           <View
             style={{
               flexDirection: "row",
@@ -320,65 +508,52 @@ export default function BookingSummaryScreen() {
               borderTopColor: "#17381B",
             }}
           >
-            <Text
-              style={{ fontSize: 18, fontWeight: "900", color: "#1F2937" }}
-            >
+            <Text style={{ fontSize: 18, fontWeight: "900", color: "#1F2937" }}>
               Total Amount
             </Text>
-            <Text
-              style={{ fontSize: 22, fontWeight: "900", color: "#17381B" }}
-            >
+            <Text style={{ fontSize: 22, fontWeight: "900", color: "#17381B" }}>
               ₹{breakdown.total}
             </Text>
           </View>
         </View>
-
-        {/* Promo Code */}
-        <View
-          style={{
-            backgroundColor: "#FFFFFF",
-            borderRadius: 18,
-            padding: 16,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 12,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 8,
-            elevation: 3,
-          }}
-        >
-          <View
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: 12,
-              backgroundColor: "#E8F5E9",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Icon name="tag" size={20} color="#17381B" />
+        <View>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 8,
+              }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: "700", color: "#1F2937" }}>
+              Special Instructions <Text style={{ color: "#DC2626" }}>*</Text>
+              </Text>
+            </View>
+            <TextInput
+              style={{
+                backgroundColor: "#F3F8EF",
+                borderRadius: 12,
+                padding: 14,
+                fontSize: 14,
+                color: "#1F2937",
+                borderWidth: 1.5,
+                borderColor: specialInstructions ? "#17381B" : "#E5E7EB",
+                height: 80,
+                textAlignVertical: "top",
+              }}
+              placeholder="Enter your complete address"
+              placeholderTextColor="#9CA3AF"
+              multiline
+              value={specialInstructions}
+              onChangeText={setSpecialInstructions}
+            />
           </View>
-          <Text
-            style={{
-              flex: 1,
-              fontSize: 14,
-              fontWeight: "700",
-              color: "#17381B",
-            }}
-          >
-            KOOLI50 applied · ₹50 saved!
-          </Text>
-          <Text style={{ fontSize: 13, color: "#6B7280" }}>Change</Text>
-        </View>
 
         {/* Cancellation Policy */}
         <View
-          style={{ 
-            backgroundColor: "#E8F5E9", 
-            borderRadius: 16, 
+          style={{
+            backgroundColor: "#E8F5E9",
+            borderRadius: 16,
             padding: 14,
             borderWidth: 1,
             borderColor: "#17381B",
@@ -386,28 +561,18 @@ export default function BookingSummaryScreen() {
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Icon3 name="file-contract" size={14} color="#17381B" />
-            <Text
-              style={{
-                fontSize: 13,
-                fontWeight: "800",
-                color: "#17381B",
-                marginBottom: 4,
-              }}
-            >
+            <Text style={{ fontSize: 13, fontWeight: "800", color:"#17381B", marginBottom: 4 }}>
               Cancellation Policy
             </Text>
           </View>
-          <Text
-            style={{ fontSize: 12, color: "#374151", lineHeight: 20 }}
-          >
-            Free cancellation up to 2 hours before service. Late cancellation
-            may incur a ₹50 fee.
+          <Text style={{ fontSize: 12, color: "#374151", lineHeight: 20 }}>
+            Free cancellation up to 2 hours before service. Late cancellation may incur a ₹50 fee.
           </Text>
         </View>
 
         {/* CTA */}
         <View style={{ gap: 10 }}>
-          <TouchableOpacity onPress={handleConfirm} activeOpacity={0.85}>
+          <TouchableOpacity onPress={handleConfirm} activeOpacity={0.85} disabled={loading}>
             <View
               style={{
                 borderRadius: 50,
@@ -416,7 +581,7 @@ export default function BookingSummaryScreen() {
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 10,
-                backgroundColor: "#17381B",
+                backgroundColor: loading ? "#9CA3AF" : "#17381B",
                 shadowColor: "#17381B",
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.3,
@@ -424,20 +589,13 @@ export default function BookingSummaryScreen() {
                 elevation: 4,
               }}
             >
-              <Text
-                style={{ fontSize: 17, fontWeight: "800", color: "#FFFFFF" }}
-              >
-                Select Worker →
+              <Text style={{ fontSize: 17, fontWeight: "800", color: "#FFFFFF" }}>
+                {loading ? "Creating Booking..." : `Confirm Booking ₹${breakdown.total}`}
               </Text>
             </View>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{ alignItems: "center", paddingVertical: 12 }}
-          >
-            <Text
-              style={{ fontSize: 15, color: "#6B7280", fontWeight: "600" }}
-            >
+          <TouchableOpacity onPress={() => router.back()} style={{ alignItems: "center", paddingVertical: 12 }}>
+            <Text style={{ fontSize: 15, color: "#6B7280", fontWeight: "600" }}>
               ✏️ Edit Details
             </Text>
           </TouchableOpacity>

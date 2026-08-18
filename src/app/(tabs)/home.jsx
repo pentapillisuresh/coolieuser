@@ -4,13 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Search, Bell, MapPin, Star, ChevronRight, Wallet, Shield, Clock, CreditCard, Headphones } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import {
-  COLORS,
-  CATEGORIES,
-  POPULAR_SERVICES,
-  MY_BOOKINGS,
-  NOTIFICATIONS,
-} from "../../data/dummy";
+import {COLORS,CATEGORIES,POPULAR_SERVICES,MY_BOOKINGS,NOTIFICATIONS} from "../../data/dummy";
 import * as SecureStore from 'expo-secure-store';
 import { getCurrentLocation } from '../../utils/liveLocation'
 import { getActivePromotions } from '../../../services/api/promotions'
@@ -18,6 +12,7 @@ import { getCategories } from '../../../services/api/categories'
 import { getMyBookings } from '../../../services/api/booking'
 import { getTopServices } from '../../../services/api/services'
 import promotionImage from '../../../assets/images/homepercentage.png'
+import { getUser } from "../../utils/storage";
 const { width } = Dimensions.get("window");
 
 // ─── Emoji mapping ──────────────────────────────────────────────
@@ -68,6 +63,14 @@ export default function HomeScreen() {
   const [booking, setBooking] = useState([])
   const [topServices, setTopServices] = useState([])
   const unreadCount = NOTIFICATIONS.filter((n) => !n.read).length;
+
+  useEffect(()=>{
+    getUserDetails();
+  })
+
+  const getUserDetails=async ()=>{
+const userDetails=await getUser();
+}
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -567,7 +570,6 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ── Active Bookings ── */}
         {/* ── Active Bookings ── */}
         {booking.filter(
           (b) => b.status === "pending" || b.status === "accepted" || b.status === "in-progress"

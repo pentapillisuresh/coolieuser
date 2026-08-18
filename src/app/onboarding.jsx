@@ -1,16 +1,9 @@
 import { useState, useRef } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Dimensions,
-  Animated,
-  Image,
-} from "react-native";
+import {View,Text,TouchableOpacity,ScrollView,Dimensions,Animated,Image} from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowRight } from "lucide-react-native";
+import * as SecureStore from 'expo-secure-store';
 
 const { width } = Dimensions.get("window");
 
@@ -46,14 +39,19 @@ export default function OnboardingScreen() {
   const scrollRef = useRef(null);
   const scrollX = useRef(new Animated.Value(0)).current;
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentIndex < ONBOARDING_SLIDES.length - 1) {
       const next = currentIndex + 1;
       scrollRef.current?.scrollTo({ x: next * width, animated: true });
       setCurrentIndex(next);
     } else {
-      router.push("/login");
-    }
+      const isLogin=SecureStore.getItem("isLogin")
+      if (isLogin) {
+        router.replace('/(tabs)/home');
+      } else {
+        router.push("/login");
+      }
+    } 
   };
 
   const handleSkip = () => router.push("/login");

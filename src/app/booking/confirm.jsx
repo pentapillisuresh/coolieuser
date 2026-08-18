@@ -5,27 +5,13 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import Icon from "react-native-vector-icons/Feather";
 import Icon2 from "react-native-vector-icons/MaterialIcons";
 import Icon3 from "react-native-vector-icons/FontAwesome5";
-import {
-  WORKERS,
-  CATEGORIES,
-  getPriceBreakdown,
-} from "../../data/dummy";
+import {WORKERS,CATEGORIES,getPriceBreakdown} from "../../data/dummy";
 
 export default function BookingConfirmScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams();
-  const {
-    categoryId,
-    serviceName,
-    servicePrice,
-    date,
-    time,
-    address,
-    workerName,
-    workerCharge,
-    workerId,
-  } = params;
+  const {categoryId,serviceName,servicePrice,date,time,address,workerName,workerCharge,workerId} = params;
   const cat = CATEGORIES.find((c) => c.id === categoryId) || CATEGORIES[0];
   const worker = WORKERS.find((w) => w.id === workerId) || WORKERS[0];
   const price = parseInt(servicePrice) || 200;
@@ -33,29 +19,6 @@ export default function BookingConfirmScreen() {
   const [selectedPayment, setSelectedPayment] = useState("upi");
   const [loading, setLoading] = useState(false);
 
-  const PAYMENT_OPTS = [
-    {
-      id: "upi",
-      label: "Google Pay (UPI)",
-      detail: "arjun@okaxis",
-      icon: "mobile-alt",
-      color: "#4285F4",
-    },
-    {
-      id: "card",
-      label: "HDFC Credit Card",
-      detail: "•••• •••• •••• 4521",
-      icon: "credit-card",
-      color: "#E53E3E",
-    },
-    {
-      id: "wallet",
-      label: "KOOLI Wallet",
-      detail: "Balance: ₹1,250",
-      icon: "wallet",
-      color: "#17381B",
-    },
-  ];
 
   const handleConfirm = () => {
     setLoading(true);
@@ -301,106 +264,6 @@ export default function BookingConfirmScreen() {
               </View>
             ))}
           </View>
-        </View>
-
-        {/* Payment Method */}
-        <View
-          style={{ 
-            backgroundColor: "#FFFFFF", 
-            borderRadius: 20, 
-            padding: 16,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 8,
-            elevation: 3,
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 13,
-              fontWeight: "800",
-              color: "#9CA3AF",
-              letterSpacing: 1,
-              marginBottom: 12,
-            }}
-          >
-            PAYMENT METHOD
-          </Text>
-          {PAYMENT_OPTS.map((opt) => {
-            const IconComponent = getPaymentIcon(opt.icon);
-            return (
-              <TouchableOpacity
-                key={opt.id}
-                onPress={() => setSelectedPayment(opt.id)}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: 12,
-                  borderRadius: 14,
-                  marginBottom: 8,
-                  borderWidth: 2,
-                  borderColor:
-                    selectedPayment === opt.id ? "#17381B" : "#F3F8EF",
-                  backgroundColor:
-                    selectedPayment === opt.id ? "#E8F5E9" : "#F8FAFF",
-                }}
-              >
-                <View
-                  style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: 12,
-                    backgroundColor: opt.color + "20",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <IconComponent name={opt.icon} size={20} color={opt.color} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      fontWeight: "700",
-                      color: "#1F2937",
-                    }}
-                  >
-                    {opt.label}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: "#6B7280" }}>
-                    {opt.detail}
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 11,
-                    borderWidth: 2,
-                    borderColor:
-                      selectedPayment === opt.id ? "#17381B" : "#D1D5DB",
-                    backgroundColor:
-                      selectedPayment === opt.id ? "#17381B" : "transparent",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {selectedPayment === opt.id && (
-                    <View
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: 4,
-                        backgroundColor: "#FFFFFF",
-                      }}
-                    />
-                  )}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
         </View>
 
         {/* Price */}

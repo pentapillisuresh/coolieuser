@@ -22,7 +22,6 @@ const DeviceErrorBoundary = ({
       window.location.reload();
       return;
     }
-
     Updates.reloadAsync().catch((error) => {
       // no-op, we don't want to show an error here
     });
@@ -54,6 +53,7 @@ export class DeviceErrorBoundaryWrapper extends React.Component<
   state: ErrorBoundaryState = { hasError: false, error: null, sentLogs: false };
 
   static getDerivedStateFromError(error: unknown): ErrorBoundaryState {
+    console.log("error:::",error)
     return { hasError: true, error, sentLogs: false };
   }
   componentDidCatch(error: unknown, errorInfo: React.ErrorInfo): void {

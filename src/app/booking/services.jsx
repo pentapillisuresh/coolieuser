@@ -18,7 +18,6 @@ export default function ServicesScreen() {
   const categoryId = params.categoryId?.toString() || '';
   const categoryName = params.categoryName?.toString() || '';
 
-  console.log('ServicesScreen - Received params:', { categoryId, categoryName });
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState([]);
   const [category, setCategory] = useState(null);
@@ -34,13 +33,14 @@ export default function ServicesScreen() {
 
   const fetchData = async () => {
     setLoading(true);
+
     try {
       // Fetch category details (for image, name, etc.)
       let catData = null;
       let serviceData = [];
       try {
         const catResponse = await getCategoryById(parseInt(categoryId));
-        console.log("category::", catResponse)
+
         catData = catResponse?.data || {};
         serviceData = catResponse?.data.Services || [];
       } catch (err) {
@@ -53,6 +53,7 @@ export default function ServicesScreen() {
         };
       }
       setCategory(catData || {});
+
       setServices(serviceData || []);
     } catch (error) {
       console.error("Failed to fetch services:", error);
@@ -67,17 +68,10 @@ export default function ServicesScreen() {
   // const services = SERVICES[categoryId] || SERVICES.electrician;
 
   const handleSelectService = (svc) => {
-    console.log('Navigating to details with:', {
-      categoryId: category?.id,
-      categoryName: category?.name,
-      serviceId: svc?.id,
-      serviceName: svc?.name,
-      servicePrice: svc?.basePrice,
-    });
 
     // Using query params instead of params for better compatibility
     router.push({
-      pathname: "/booking/details",
+      pathname: "booking/details",
       params: {
         categoryId: category?.id,
         categoryName: category?.name,
@@ -199,10 +193,22 @@ export default function ServicesScreen() {
         >
           SELECT A SERVICE
         </Text>
-        {services?.map((svc) => (
+        {services?.map((svc) => ( 
           <TouchableOpacity
             key={svc?.id}
-            onPress={() => handleSelectService(svc)}
+            onPress={() => {
+              // router.push({
+              //   pathname: "booking/details",
+              //   params: {
+              //     categoryId: category?.id,
+              //     categoryName: category?.name,
+              //     serviceId: svc?.id,
+              //     serviceName: svc?.name,
+              //     servicePrice: svc?.price.toString(),
+              //   }
+              // }) 
+              console.log("rrr::",svc?.id)
+            }}
             activeOpacity={0.85}
             style={{
               backgroundColor: "#FFFFFF",
@@ -242,7 +248,8 @@ export default function ServicesScreen() {
                     height: 60,
                     borderRadius: 18,
                   }}
-                />              </View>
+                />
+              </View>
 
               <View style={{ flex: 1 }}>
                 <View
@@ -342,7 +349,20 @@ export default function ServicesScreen() {
 
             {/* Book button - No Gradient */}
             <TouchableOpacity
-              onPress={() => handleSelectService(svc)}
+              onPress={() => { 
+                console.log("services::::",svc?.basePrice)
+                router.push({
+                  pathname: "/booking/details",
+                  params: {
+                    categoryId: String(category?.id ?? ""),
+                    categoryName: category?.name ?? "",
+                    serviceId: String(svc?.id ?? ""),
+                    serviceName: svc?.name ?? "",
+                    servicePrice: String(svc?.basePrice ?? ""),
+                  },
+                })
+               }
+              }
               style={{
                 marginTop: 14,
                 backgroundColor: "#17381B",

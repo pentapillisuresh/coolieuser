@@ -72,6 +72,7 @@ export default function OTPScreen() {
       const token = res.token
       storeToken(token)
       SecureStore.setItemAsync("userData",JSON.stringify(res?.user));
+      SecureStore.setItemAsync("isLogin","true");
       router.replace("/profile-setup");
     } catch (err) {
       console.error("OTP verification failed:", err);
