@@ -275,3 +275,169 @@ category: [
     "updatedAt": "2026-06-25T06:13:22.000Z"
 }
 ]
+//service
+{
+"Category": {
+    "createdAt": "2026-08-03T20:56:19.000Z",
+    "deletedAt": null,
+    "description": "Haircuts, beard, shaving, facials, massages",
+    "icon": "Mars",
+    "id": 2,
+    "image": "https://picsum.photos/seed/men-salon/400/300",
+    "isActive": true,
+    "name": "Men's Salon & Grooming",
+    "slug": "men-salon-grooming",
+    "sortOrder": 2,
+    "updatedAt": "2026-08-03T20:56:19.000Z"
+},
+"basePrice": "250.00",
+"categoryId": 2,
+"createdAt": "2026-08-03T20:56:19.000Z",
+"deletedAt": null,
+"description": "Classic haircut",
+"duration": 25,
+"id": 6,
+"image": "https://picsum.photos/seed/men-haircut/200/150",
+"isActive": true,
+"metadata": {
+    "formFields": [
+        [Object
+        ]
+    ],
+    "priceCalculation": {
+        "type": "fixed"
+    }
+},
+"name": "Standard Haircut",
+"slug": "standard-haircut",
+"updatedAt": "2026-08-03T20:56:19.000Z"
+}
+//booking payload
+{
+"address": "vizag",
+"details": {
+    "bookingType": "now",
+    "categoryName": "Home Repairs & Handyman",
+    "issueDescription": "rrr",
+    "promotionId": 1,
+    "serviceName": "Electrician",
+    "serviceType": "Switchboard Repair"
+},
+"latitude": 17.6935526,
+"longitude": 83.2921297,
+"scheduledDate": "2026-09-07",
+"scheduledTime": "10:00 AM",
+"serviceId": 21,
+"specialInstructions": "",
+"totalAmount": 362
+}
+//booking details
+{
+"bookingType": "now",
+"promotionId": 1,
+"serviceName": "Electrician",
+"serviceType": "Switchboard Repair",
+"categoryName": "Home Repairs & Handyman",
+"issueDescription": "rrr"
+}
+
+//bookings item
+{
+"Job": null,
+"Payment": {
+    "amount": "618.00",
+    "bookingId": 17,
+    "createdAt": "2026-09-07T21:02:03.000Z",
+    "currency": "INR",
+    "gatewayResponse": {
+        "amount": 61800,
+        "amount_due": 61800,
+        "amount_paid": 0,
+        "attempts": 0,
+        "created_at": 1788814923,
+        "currency": "INR",
+        "entity": "order",
+        "id": "order_TZHv5UCi8htJjp",
+        "notes": [Object
+        ],
+        "offer_id": null,
+        "razorpay_payment_id": "pay_TZHvTxUXEKK0aW",
+        "razorpay_signature": "2be1cea4c2fe2061c98e890143bac6f12b0de4ab7a9d7049cc2b1024939827ae",
+        "receipt": "booking_17",
+        "status": "created"
+    },
+    "id": 16,
+    "paidAt": "2026-09-07T21:02:33.000Z",
+    "paymentMethod": "razorpay",
+    "razorpayOrderId": "order_TZHv5UCi8htJjp",
+    "razorpayPaymentId": "pay_TZHvTxUXEKK0aW",
+    "razorpaySignature": "2be1cea4c2fe2061c98e890143bac6f12b0de4ab7a9d7049cc2b1024939827ae",
+    "status": "paid",
+    "transactionId": "pay_TZHvTxUXEKK0aW",
+    "updatedAt": "2026-09-07T21:02:33.000Z",
+    "webhookStatus": "pending"
+},
+"Service": {
+    "Category": {
+        "createdAt": "2026-08-03T20:56:19.000Z",
+        "deletedAt": null,
+        "description": "Freight unloading, pallet stacking, loading",
+        "icon": "Package",
+        "id": 8,
+        "image": "https://picsum.photos/seed/warehouse/400/300",
+        "isActive": true,
+        "name": "Warehousing & Logistics",
+        "slug": "warehousing-logistics",
+        "sortOrder": 8,
+        "updatedAt": "2026-08-03T20:56:19.000Z"
+    },
+    "basePrice": "499.00",
+    "categoryId": 8,
+    "createdAt": "2026-08-03T20:56:19.000Z",
+    "deletedAt": null,
+    "description": "Container unloading",
+    "duration": 60,
+    "id": 30,
+    "image": "https://picsum.photos/seed/freight/200/150",
+    "isActive": true,
+    "metadata": {
+        "formFields": [Array
+        ],
+        "priceCalculation": [Object
+        ]
+    },
+    "name": "Freight Unloading",
+    "slug": "freight-unloading",
+    "updatedAt": "2026-08-03T20:56:19.000Z"
+},
+"User": {
+    "id": 2,
+    "mobile": "9494130830",
+    "name": "A Ravi Kumar"
+},
+"address": "Vizag,jagadhamba",
+"createdAt": "2026-09-07T21:01:52.000Z",
+"deletedAt": null,
+"details": {
+    "bookingType": "schedule",
+    "categoryName": "Warehousing & Logistics",
+    "containerType": "Standard",
+    "pallets": "5",
+    "serviceName": "Freight Unloading",
+    "weight": "100"
+},
+"estimatedArrival": null,
+"groupId": null,
+"id": 17,
+"latitude": 17.333,
+"longitude": 83.333,
+"paymentStatus": "paid",
+"scheduledDate": "2026-09-09",
+"scheduledTime": "16:00:00",
+"serviceId": 30,
+"specialInstructions": "Carry carefully",
+"status": "completed",
+"totalAmount": "618.00",
+"updatedAt": "2026-09-07T21:02:33.000Z",
+"userId": 2
+}

@@ -30,5 +30,8 @@ export const getProfile = (): Promise<{ success: boolean; data: User }> =>
 export const registerDeviceToken = (deviceToken: string, deviceType?: string): Promise<{ success: boolean; message: string }> =>
   client.post('/auth/device-token', { deviceToken, deviceType });
 
+export const testNotification = (token: string): Promise<{ success: boolean; message: string }> =>
+  client.post('/users/test-notification', { token });
+
 export const logout = (): Promise<{ success: boolean; message: string }> =>
   client.post('/auth/logout');

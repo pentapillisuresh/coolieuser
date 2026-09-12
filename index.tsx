@@ -17,8 +17,14 @@ import { DeviceErrorBoundaryWrapper } from './__create/DeviceErrorBoundary';
 import { initTestFlightLogger } from './__create/testflight-logger';
 import App from './entrypoint';
 import AnythingMenu from './src/__create/anything-menu';
+import messaging from '@react-native-firebase/messaging';
 
 initTestFlightLogger();
+
+// Register background handler here so it runs as early as possible
+messaging().setBackgroundMessageHandler(async remoteMessage => {
+  console.log('Message handled in the background!', remoteMessage);
+});
 
 if (__DEV__ || process.env.EXPO_PUBLIC_CREATE_ENV === 'DEVELOPMENT') {
   LogBox.ignoreAllLogs();

@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Feather";
 import Icon2 from "react-native-vector-icons/MaterialIcons";
 import Icon3 from "react-native-vector-icons/FontAwesome5";
+import { getBookingById } from "../../../services/api/booking";
 
 const BOOKING_ID = "KL" + Math.random().toString().slice(2, 8).toUpperCase();
 
@@ -12,11 +13,14 @@ export default function SuccessScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
-  const { serviceName, amount, workerName, date, time } = params;
+  const { bookingId,orderId,serviceName, amount, workerName, date, time } = params;
+  const [booking, setBooking] = useState(null);
+  const [bookingStatus, setBookingStatus] = useState('');
   const [status, setStatus] = useState("waiting"); // waiting | accepted
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [isFetching, setIsFetching] = useState(true);
 
   useEffect(() => {
     // Entrance
@@ -52,12 +56,60 @@ export default function SuccessScreen() {
     pulse.start();
 
     // Simulate worker accepting
-    const t = setTimeout(() => setStatus("accepted"), 5000);
-    return () => {
-      clearTimeout(t);
-      pulse.stop();
-    };
+    // const t = setTimeout(() => setStatus("accepted"), 5000);
+    // return () => {
+    //   clearTimeout(t);
+    //   pulse.stop();
+    // };
   }, []);
+
+  const fetchBookingDetails = async (id) => {
+    try {
+      setIsFetching(true);
+
+      const response = await getBookingById(Number(id));
+
+      console.log("📦 Booking API Response:", response.data);
+
+      if (!response?.success) {
+        throw new Error("Unable to fetch booking details.");
+      }
+
+      // API response:
+      // {
+      //   success: true,
+      //   data: {
+      //      id: 7,
+      //      Service: {...},
+      //      User: {...},
+      //      ...
+      //   }
+      // }
+
+      setBooking(response.data);
+      setBookingStatus(response.data.paymentStatus);
+    } catch (error) {
+      console.error("❌ Failed to fetch booking:", error);
+
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message ||
+          error?.message ||
+          "Could not load booking details."
+      );
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
+  useEffect(() => {
+    if (bookingId) {
+      fetchBookingDetails(bookingId);
+    } else {
+      setIsFetching(false);
+      Alert.alert("Error", "Booking ID is missing.");
+    }
+  }, [bookingId]);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F3F8EF" }}>
@@ -110,7 +162,7 @@ export default function SuccessScreen() {
               marginBottom: 10,
             }}
           >
-            Booking Confirmed! 🎉
+           {bookingStatus=="paid" ? "Booking Confirmed 🎉":"Booking Failed!"} 
           </Text>
           <Text
             style={{
@@ -199,7 +251,7 @@ export default function SuccessScreen() {
               BOOKING RECEIPT
             </Text>
             {[
-              { label: "Booking ID", value: "#KL" + "2024005" },
+              { label: "Booking ID", value: orderId || "#KL" + "2024005" },
               { label: "Service", value: serviceName || "Fan Installation" },
               {
                 label: "Date & Time",
@@ -239,7 +291,7 @@ export default function SuccessScreen() {
               onPress={() =>
                 router.push({
                   pathname: "/booking/invoice",
-                  params: { bookingId: "KL2024005", amount: amount || "380" },
+                  params: { bookingId: bookingId, amount: amount || "380" },
                 })
               }
               style={{
@@ -276,24 +328,9 @@ export default function SuccessScreen() {
               activeOpacity={0.85}
             >
               <View
-                style={{
-                  borderRadius: 50,
-                  paddingVertical: 16,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 10,
-                  backgroundColor: "#17381B",
-                  shadowColor: "#17381B",
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 8,
-                  elevation: 4,
-                }}
-              >
+                style={{ borderRadius: 50, paddingVertical: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: "#17381B", shadowColor: "#17381B", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4}}>
                 <Text
-                  style={{ fontSize: 16, fontWeight: "800", color: "#FFFFFF" }}
-                >
+                  style={{ fontSize: 16, fontWeight: "800", color: "#FFFFFF" }}>
                   Track Booking
                 </Text>
                 <Icon name="arrow-right" size={20} color="#FFFFFF" />
@@ -330,7 +367,7 @@ export default function SuccessScreen() {
             </TouchableOpacity>
           )}
           <TouchableOpacity
-            onPress={() => router.replace("/(tabs)/home")}
+            onPress={() => router.replace("../(tabs)/home")}
             style={{
               borderRadius: 50,
               paddingVertical: 14,

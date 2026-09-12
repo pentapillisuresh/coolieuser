@@ -3,6 +3,12 @@ import client from './client';
 export const getActivePromotions = (params?: { page?: number; limit?: number }) =>
   client.get('/promotions', { params });
 
+export const validateCoupon = (code: string, mobile: string) =>
+  client.post('/promotions/validate', { code, mobile });
+
+export const applyCoupon = (code: string, orderId: number) =>
+  client.post('/promotions/apply', { code, orderId });
+
 export const getPromotionById = (id: number) =>
   client.get(`/promotions/${id}`);
 

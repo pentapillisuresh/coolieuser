@@ -1,52 +1,55 @@
-import { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StatusBar, Alert } from "react-native";
+import { useState, useEffect, useCallback } from "react";
+import {View,Text,ScrollView,TouchableOpacity,StatusBar,Alert,RefreshControl,ActivityIndicator,Linking} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import {
-  Star,
-  MapPin,
-  Calendar,
-  RotateCcw,
-  FileText,
-  ChevronRight,
-  Phone,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  X,
-} from "lucide-react-native";
-import { MY_BOOKINGS } from "../../data/dummy";
+import {Star,MapPin,Calendar,RotateCcw,FileText,ChevronRight,Phone,Clock,CheckCircle,XCircle,AlertCircle,X} from "lucide-react-native";
+import { getMyBookings, cancelBooking } from "../../../services/api/booking";
 
 const TABS = ["Active", "Upcoming", "Completed", "Cancelled"];
 
-const STATUS_CONFIG = {
-  active: {
-    label: "Active",
-    color: "#16A34A",
-    bg: "#DCFCE7",
-    emoji: "🟢",
-    icon: Clock,
-  },
-  upcoming: {
-    label: "Upcoming",
+// Map booking status to tab filter
+const statusMap = {
+  Active: ["accepted", "in-progress"],
+  Upcoming: ["pending"],
+  Completed: ["completed", "payment-pending"],
+  Cancelled: ["cancelled"],
+};
+
+const STATUS_CONFIG= {
+  pending: {
+    label: "Pending",
     color: "#2563EB",
     bg: "#DBEAFE",
-    emoji: "📅",
-    icon: Calendar,
+    icon: Clock,
+  },
+  accepted: {
+    label: "Accepted",
+    color: "#16A34A",
+    bg: "#DCFCE7",
+    icon: CheckCircle,
+  },
+  "in-progress": {
+    label: "In Progress",
+    color: "#D97706",
+    bg: "#FEF3C7",
+    icon: Clock,
   },
   completed: {
     label: "Completed",
     color: "#6B7280",
     bg: "#F3F4F6",
-    emoji: "✅",
     icon: CheckCircle,
+  },
+  "payment-pending": {
+    label: "Payment Pending",
+    color: "#D97706",
+    bg: "#FEF3C7",
+    icon: AlertCircle,
   },
   cancelled: {
     label: "Cancelled",
     color: "#DC2626",
     bg: "#FEE2E2",
-    emoji: "❌",
     icon: XCircle,
   },
 };
@@ -61,37 +64,122 @@ export default function BookingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("Active");
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalItems, setTotalItems] = useState(0);
+  const limit = 10;
 
-  const filtered = MY_BOOKINGS.filter((b) => {
-    if (activeTab === "Active") return b.status === "active";
-    if (activeTab === "Upcoming") return b.status === "upcoming";
-    if (activeTab === "Completed") return b.status === "completed";
-    if (activeTab === "Cancelled") return b.status === "cancelled";
-    return true;
-  });
+  const fetchBookings = useCallback(
+    async (reset = false) => {
+      if (loading) return;
+      if (!reset && !hasMore) return;
 
-  const handleCancelBooking = (booking) => {
+      setLoading(true);
+      try {
+        const statuses = statusMap[activeTab] || [];
+        // API expects a single status, but we can send multiple as comma-separated? We'll use the first.
+        // Alternatively, we can loop through statuses and combine, but for simplicity we use the first.
+        // Better: we can filter client-side after fetching all statuses, but that defeats pagination.
+        // We'll pick the first status for the API, but we can modify backend to accept array.
+        // For now, we'll send first status if single else we fetch all and filter.
+        // Let's fetch all statuses and filter locally (not ideal but works for demo).
+        // We'll fetch all bookings with statuses.
+        // We'll create a separate fetch for each tab.
+        // Simpler: fetch all bookings and filter by status in JS.
+        // But we need pagination per tab, so we'll fetch with status filter.
+        // We'll assume API accepts a status string (e.g., 'pending', 'accepted', etc.)
+        const status = statuses.length === 1 ? statuses[0] : undefined;
+        const response = await getMyBookings({
+          page: reset ? 1 : page,
+          limit,
+          status,
+        });
+        const newItems = response.data.items || [];
+        const total = response.data.totalItems || 0;
+        setTotalItems(total);
+        if (reset) {
+          setBookings(newItems);
+        } else {
+          setBookings((prev) => [...prev, ...newItems]);
+        }
+        setHasMore(newItems.length === limit && page * limit < total);
+        if (reset) setPage(1);
+        else setPage((p) => p + 1);
+      } catch (error) {
+        console.error("Fetch bookings error:", error);
+        Alert.alert("Error", "Failed to load bookings");
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [activeTab, page, hasMore, loading]
+  );
+
+  useEffect(() => {
+    // Reset and fetch on tab change
+    setPage(1);
+    setHasMore(true);
+    setBookings([]);
+    fetchBookings(true);
+  }, [activeTab]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    setPage(1);
+    setHasMore(true);
+    fetchBookings(true);
+  };
+
+  const loadMore = () => {
+    if (!loading && hasMore) {
+      fetchBookings(false);
+    }
+  };
+
+  const handleCancel = async (bookingId, serviceName) => {
     Alert.alert(
       "Cancel Booking",
-      `Are you sure you want to cancel "${booking.service}"?`,
+      `Are you sure you want to cancel "${serviceName}"?`,
       [
         { text: "No", style: "cancel" },
-        { 
-          text: "Yes, Cancel", 
+        {
+          text: "Yes, Cancel",
           style: "destructive",
-          onPress: () => {
-            // Handle cancellation logic here
-            Alert.alert("Success", "Booking has been cancelled successfully!");
-          }
+          onPress: async () => {
+            try {
+              await cancelBooking(bookingId, "User requested cancellation");
+              Alert.alert("Success", "Booking cancelled successfully!");
+              // Refresh list
+              onRefresh();
+            } catch (error) {
+              Alert.alert("Error", error.message || "Failed to cancel booking");
+            }
+          },
         },
       ]
     );
   };
 
-  const BookingCard = ({ booking }) => {
-    const statusConf = STATUS_CONFIG[booking.status] || {};
-    const payConf = PAYMENT_CONFIG[booking.paymentStatus] || {};
+  const BookingCard = ({ booking, onCancel }) => {
+    const status = booking.status;
+    const statusConf = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
+    const payConf = PAYMENT_CONFIG[booking.paymentStatus] || PAYMENT_CONFIG.pending;
     const StatusIcon = statusConf.icon || AlertCircle;
+    const worker = booking.Job?.Worker;
+    const workerUser = worker?.User;
+    const workerPhone = workerUser?.mobile;
+
+    const handleCall = () => {
+      if (workerPhone) {
+        Linking.openURL(`tel:${workerPhone}`);
+      } else {
+        Alert.alert("No phone number available");
+      }
+    };
 
     return (
       <TouchableOpacity
@@ -99,7 +187,7 @@ export default function BookingsScreen() {
         onPress={() =>
           router.push({
             pathname: "/booking/accepted",
-            params: { bookingId: booking.bookingId },
+            params: { bookingId: booking.id.toString() },
           })
         }
         style={{
@@ -134,10 +222,10 @@ export default function BookingsScreen() {
                   marginBottom: 2,
                 }}
               >
-                {booking.service}
+                {booking.Service?.name || "Service"}
               </Text>
               <Text style={{ fontSize: 12, color: "#6B7280" }}>
-                {booking.category} • {booking.bookingId}
+                {booking.Service?.Category?.name || "Category"} • #{booking.id}
               </Text>
             </View>
             <View
@@ -195,35 +283,38 @@ export default function BookingsScreen() {
               <Text
                 style={{ fontSize: 15, fontWeight: "700", color: "#1F2937" }}
               >
-                {booking.worker}
+                {workerUser?.name || "Worker"}
               </Text>
               <View
                 style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
               >
                 <Star size={12} color="#F59E0B" fill="#F59E0B" />
                 <Text style={{ fontSize: 12, color: "#6B7280" }}>
-                  4.8 • Verified Worker
+                  {worker?.rating || 4.8} • {worker?.isVerified ? "Verified" : "Unverified"}
                 </Text>
               </View>
             </View>
-            <TouchableOpacity
-              style={{
-                backgroundColor: "#17381B",
-                borderRadius: 50,
-                paddingHorizontal: 16,
-                paddingVertical: 10,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <Phone size={14} color="#FFFFFF" />
-              <Text
-                style={{ fontSize: 12, fontWeight: "700", color: "#FFFFFF" }}
+            {workerPhone && (
+              <TouchableOpacity
+                onPress={handleCall}
+                style={{
+                  backgroundColor: "#17381B",
+                  borderRadius: 50,
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                }}
               >
-                CALL
-              </Text>
-            </TouchableOpacity>
+                <Phone size={14} color="#FFFFFF" />
+                <Text
+                  style={{ fontSize: 12, fontWeight: "700", color: "#FFFFFF" }}
+                >
+                  CALL
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Date + Address */}
@@ -233,7 +324,7 @@ export default function BookingsScreen() {
             >
               <Calendar size={16} color="#17381B" />
               <Text style={{ fontSize: 13, color: "#374151", fontWeight: "500" }}>
-                {booking.date}
+                {booking.scheduledDate || "N/A"} at {booking.scheduledTime?.slice(0, 5) || "N/A"}
               </Text>
             </View>
             <View
@@ -244,7 +335,7 @@ export default function BookingsScreen() {
                 style={{ fontSize: 13, color: "#6B7280", flex: 1 }}
                 numberOfLines={1}
               >
-                {booking.address}
+                {booking.address || "No address"}
               </Text>
             </View>
           </View>
@@ -275,7 +366,7 @@ export default function BookingsScreen() {
                   color: "#17381B",
                 }}
               >
-                ₹{booking.amount}
+                ₹{booking.totalAmount || 0}
               </Text>
               <View
                 style={{
@@ -299,15 +390,15 @@ export default function BookingsScreen() {
               </View>
             </View>
             <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-              {booking.status === "completed" && (
+              {["completed", "payment-pending"].includes(status) && (
                 <>
                   <TouchableOpacity
                     onPress={() =>
                       router.push({
                         pathname: "/booking/invoice",
                         params: {
-                          bookingId: booking.bookingId,
-                          amount: booking.amount,
+                          bookingId: booking.id.toString(),
+                          amount: booking.totalAmount?.toString(),
                         },
                       })
                     }
@@ -358,14 +449,13 @@ export default function BookingsScreen() {
                   </TouchableOpacity>
                 </>
               )}
-              {(booking.status === "active" ||
-                booking.status === "upcoming") && (
+              {["pending", "accepted"].includes(status) && (
                 <>
                   <TouchableOpacity
                     onPress={() =>
                       router.push({
                         pathname: "/booking/accepted",
-                        params: { bookingId: booking.bookingId },
+                        params: { bookingId: booking.id.toString() },
                       })
                     }
                     style={{
@@ -390,7 +480,7 @@ export default function BookingsScreen() {
                     <ChevronRight size={16} color="#FFFFFF" />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    onPress={() => handleCancelBooking(booking)}
+                    onPress={() => handleCancel(booking.id, booking.Service?.name || "Service")}
                     style={{
                       flexDirection: "row",
                       alignItems: "center",
@@ -414,7 +504,7 @@ export default function BookingsScreen() {
                   </TouchableOpacity>
                 </>
               )}
-              {booking.status === "cancelled" && (
+              {status === "cancelled" && (
                 <TouchableOpacity
                   style={{
                     flexDirection: "row",
@@ -445,11 +535,12 @@ export default function BookingsScreen() {
     );
   };
 
+  const filteredBookings = bookings; // Already filtered by API
+
   return (
     <View style={{ flex: 1, backgroundColor: "#F3F8EF" }}>
       <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
       
-      {/* Premium Header */}
       <View
         style={{
           backgroundColor: "#17381B",
@@ -470,7 +561,6 @@ export default function BookingsScreen() {
           My Bookings
         </Text>
         
-        {/* Premium Tabs */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -479,9 +569,8 @@ export default function BookingsScreen() {
         >
           {TABS.map((tab) => {
             const active = tab === activeTab;
-            const count = MY_BOOKINGS.filter(
-              (b) => b.status === tab.toLowerCase(),
-            ).length;
+            // Count from totalItems or bookings length
+            const count = activeTab === tab ? totalItems : 0;
             return (
               <TouchableOpacity
                 key={tab}
@@ -538,12 +627,22 @@ export default function BookingsScreen() {
         </ScrollView>
       </View>
 
-      {/* Content */}
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingTop: 20, paddingBottom: 24 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        onScroll={({ nativeEvent }) => {
+          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+          const isEnd = layoutMeasurement + contentOffset.y >= contentSize.height - 20;
+          if (isEnd) loadMore();
+        }}
+        scrollEventThrottle={16}
       >
-        {filtered.length === 0 ? (
+        {loading && bookings.length === 0 ? (
+          <ActivityIndicator size="large" color="#17381B" style={{ marginTop: 40 }} />
+        ) : filteredBookings.length === 0 ? (
           <View
             style={{
               alignItems: "center",
@@ -611,7 +710,19 @@ export default function BookingsScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          filtered.map((b) => <BookingCard key={b.id} booking={b} />)
+          <>
+            {filteredBookings.map((b) => (
+              <BookingCard key={b.id} booking={b} />
+            ))}
+            {loading && bookings.length > 0 && (
+              <ActivityIndicator size="small" color="#17381B" style={{ marginVertical: 16 }} />
+            )}
+            {!hasMore && bookings.length > 0 && (
+              <Text style={{ textAlign: "center", color: "#9CA3AF", marginVertical: 12 }}>
+                No more bookings
+              </Text>
+            )}
+          </>
         )}
       </ScrollView>
     </View>

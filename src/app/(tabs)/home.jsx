@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { View, FlatList, Text, ScrollView, TextInput, TouchableOpacity, Dimensions, ImageBackground, Image, StatusBar } from "react-native";
+import { View, FlatList, Text, ScrollView, TextInput, TouchableOpacity, Dimensions, ImageBackground, Image, StatusBar,Platform,Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Search, Bell, MapPin, Star, ChevronRight, Wallet, Shield, Clock, CreditCard, Headphones } from "lucide-react-native";
@@ -11,8 +11,12 @@ import { getActivePromotions } from '../../../services/api/promotions'
 import { getCategories } from '../../../services/api/categories'
 import { getMyBookings } from '../../../services/api/booking'
 import { getTopServices } from '../../../services/api/services'
+import {registerDeviceToken, testNotification} from '../../../services/api/auth'
 import promotionImage from '../../../assets/images/homepercentage.png'
 import { getUser } from "../../utils/storage";
+import getFcmToken from "../../utils/fcmToken";
+import messaging from '@react-native-firebase/messaging';
+
 const { width } = Dimensions.get("window");
 
 // ─── Emoji mapping ──────────────────────────────────────────────
@@ -67,6 +71,33 @@ export default function HomeScreen() {
   useEffect(()=>{
     getUserDetails();
   })
+
+  useEffect(() => {
+    registerUserDeviceToken();
+     // 3. Foreground message handler
+     const unsubscribe = messaging().onMessage(async remoteMessage => {
+      Alert.alert('New Notification!', remoteMessage.notification?.body);
+    });
+    return unsubscribe;
+  }, []);
+  
+//   // 4. Background & Terminated handler (Must be registered outside of components)
+// messaging().setBackgroundMessageHandler(async remoteMessage => {
+//   console.log('Message handled in the background!', remoteMessage);
+// });
+
+  const registerUserDeviceToken=async ()=>{
+    const deviceToken=await getFcmToken();
+
+    const deviceType = Platform.OS;
+    const res= await registerDeviceToken(deviceToken,deviceType);
+
+    if (res.success) {
+      const testNotificationResponce= await testNotification(deviceToken);
+      console.log("notification send ::",testNotificationResponce)
+    }
+
+  }
 
   const getUserDetails=async ()=>{
 const userDetails=await getUser();

@@ -1,21 +1,15 @@
 import { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  StatusBar,
-  ActivityIndicator,
-  TextInput,
-} from "react-native";
+import {View,Text,ScrollView,TouchableOpacity,Alert,StatusBar,ActivityIndicator,TextInput} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Icon from "react-native-vector-icons/Feather";
 import Icon2 from "react-native-vector-icons/MaterialIcons";
 import Icon3 from "react-native-vector-icons/FontAwesome5";
 import { createBooking } from "../../../services/api/booking";
-import { verifyCoupon } from "../../../services/api/promotions";
+import { validateCoupon } from "../../../services/api/promotions";
+import * as SecureStore from 'expo-secure-store';
+import { useData } from "@shopify/react-native-skia";
+import messaging from '@react-native-firebase/messaging';
 
 // ─── Helper for price breakdown ──────────────────────────────────
 const getPriceBreakdown = (base, discount = 0) => {
@@ -29,6 +23,7 @@ export default function BookingSummaryScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams();
+  const [userData, setUserData] = useState(null)
   const [specialInstructions, setSpecialInstructions] = useState("");
   // ─── Parse payload ──────────────────────────────────────────────
   let payload = null;
@@ -103,8 +98,8 @@ async function geocodeAddress(address) {
   const [isApplying, setIsApplying] = useState(false);
   const [couponMessage, setCouponMessage] = useState(null);
   const [couponError, setCouponError] = useState(null);
-  const [latitude, setLatitude] = useState("");
-  const [longitude, setLongitude] = useState("");
+  const [latitude, setLatitude] = useState("17.333");
+  const [longitude, setLongitude] = useState("83.333");
 
   const basePrice = Number(servicePrice) || 0;
   const breakdown = getPriceBreakdown(basePrice, appliedDiscount);
@@ -120,6 +115,32 @@ async function geocodeAddress(address) {
     }
     getLocation();
   },[address])
+
+  useEffect(() => {
+
+    const unsubscribe = messaging().onMessage(async remoteMessage => {
+      Alert.alert('New booking Notification!', remoteMessage.notification?.body);
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const getData = async () => {
+      try {
+        const userDetails = await SecureStore.getItemAsync("userData");
+
+        if (userDetails) {
+          setUserData(JSON.parse(userDetails));
+        }
+
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    getData();
+  }, []);
+
   // ─── Handle coupon application ──────────────────────────────────
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
@@ -132,8 +153,9 @@ async function geocodeAddress(address) {
     setCouponMessage(null);
 
     try {
-      const response = await verifyCoupon(couponCode.trim());
-      if (response.data?.valid) {
+      const response = await validateCoupon(couponCode.trim(),userData.mobile);
+      console.log("coupon valide::",response.message)
+      if (response?.success) {
         let discountAmount = 0;
         if (response.data.discountType === "percentage") {
           discountAmount = Math.round((basePrice * response.data.discountValue) / 100);
@@ -141,11 +163,11 @@ async function geocodeAddress(address) {
           discountAmount = response.data.discountValue;
         }
         setAppliedDiscount(discountAmount);
-        setPromotionId(response.data.promotionId || null);
-        setCouponMessage(response.data.message || "Coupon applied successfully!");
+        setPromotionId(response.data.id || null);
+        setCouponMessage(response.message || "Coupon applied successfully!");
         setCouponError(null);
       } else {
-        setCouponError(response.data?.message || "Invalid coupon code");
+        setCouponError(response?.message || "Invalid coupon code");
         setAppliedDiscount(0);
         setPromotionId(null);
         setCouponMessage(null);
@@ -167,7 +189,36 @@ async function geocodeAddress(address) {
     setCouponMessage(null);
     setCouponError(null);
   };
-
+  const convertToMySQLTime = (time) => {
+    if (!time) return "10:00:00";
+  
+    // Already MySQL TIME format
+    if (/^\d{2}:\d{2}:\d{2}$/.test(time)) {
+      return time;
+    }
+  
+    // Convert "10:00 AM" / "2:30 PM" → "10:00:00" / "14:30:00"
+    const match = time.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  
+    if (!match) {
+      throw new Error("Invalid scheduledTime format. Use HH:mm:ss or hh:mm AM/PM");
+    }
+  
+    let hours = parseInt(match[1], 10);
+    const minutes = match[2];
+    const period = match[3].toUpperCase();
+  
+    if (period === "AM" && hours === 12) {
+      hours = 0;
+    }
+  
+    if (period === "PM" && hours !== 12) {
+      hours += 12;
+    }
+  
+    return `${String(hours).padStart(2, "0")}:${minutes}:00`;
+  };
+  
   // ─── Handle confirm booking ────────────────────────────────────
   const handleConfirm = async () => {
     setLoading(true);
@@ -176,7 +227,7 @@ async function geocodeAddress(address) {
         serviceId: Number(serviceId),
         address: address || "Address not provided",
         scheduledDate: scheduledDate || new Date().toISOString().split("T")[0],
-        scheduledTime: scheduledTime || "10:00 AM",
+        scheduledTime: convertToMySQLTime(scheduledTime) || "10:00:00",
         specialInstructions,
         latitude,
         longitude,
@@ -187,14 +238,17 @@ async function geocodeAddress(address) {
           serviceName,
           ...(promotionId && { promotionId }),
         },
+        servicePrice:breakdown.base,
+        GST:breakdown.gst,
+        convenianceCharges:breakdown.platform_fee,
+        discountAmount:breakdown.discount,
         totalAmount: breakdown.total,
       };
-
       const response = await createBooking(bookingData);
       Alert.alert("Success", "Booking created successfully!");
 
       router.push({
-        pathname: "/booking/confirmation",
+        pathname: "/booking/confirm",
         params: { bookingId: response.data.id.toString() },
       });
     } catch (error) {

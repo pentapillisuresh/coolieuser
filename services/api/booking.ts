@@ -107,10 +107,9 @@ export const updateBooking = (
  */
 export const cancelBooking = (
   id: number,
-  reason?: string,
-  reasonDetails?: string
+  reason?: string
 ): Promise<BookingResponse> =>
-  client.put(`/bookings/${id}/cancel`, { reason, reasonDetails });
+  client.put(`/bookings/${id}/cancel`, { reason });
 
 /**
  * Update group for a booking (authenticated user)

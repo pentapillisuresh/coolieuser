@@ -7,21 +7,34 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
+      "config": {
+        "googleMapsApiKey": "AIzaSyC3MxW6PXeGxkCDCg-d4-_97hUEB8uS91w"
+      },
       "supportsTablet": true,
       "bundleIdentifier": "com.esotericproject.cooliuser",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "We need your location to find nearby workers.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "We track your location for real-time worker updates."
       }
     },
     "android": {
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyC3MxW6PXeGxkCDCg-d4-_97hUEB8uS91w"
+        }
+      },
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/coolilogo.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "FOREGROUND_SERVICE",
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS"
       ],
       "package": "com.esotericproject.cooliuser",
       "googleServicesFile": "./google-services.json"
@@ -31,6 +44,12 @@
         "expo-router",
         {
           "sitemap": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Cooli to access your location for real-time tracking."
         }
       ],
       [
@@ -75,7 +94,8 @@
       "expo-secure-store",
       "expo-notifications",
       "@react-native-firebase/app",
-      "expo-web-browser"
+      "expo-web-browser",
+      "@react-native-firebase/messaging"
     ],
     "web": {
       "bundler": "metro",

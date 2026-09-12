@@ -1,5 +1,6 @@
 import { App } from 'expo-router/build/qualified-entry';
 import { ScreenViewTracker } from './src/__create/analytics';
+import { SocketProvider } from './src/context/SocketContext';
 
 // Screen-view analytics is mounted here, in the entry, rather than in
 // app/_layout. The entry is platform scaffold that ships with the template, so
@@ -8,9 +9,9 @@ import { ScreenViewTracker } from './src/__create/analytics';
 // root). usePathname reads expo-router's global store.
 export default function MobileRoot() {
   return (
-    <>
+    <SocketProvider>
       <ScreenViewTracker />
       <App />
-    </>
+    </SocketProvider>
   );
 }
