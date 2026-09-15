@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import {View,Text,ScrollView,TouchableOpacity,Alert,StatusBar,ActivityIndicator,Linking,Modal,TextInput,FlatList,KeyboardAvoidingView,Platform} from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Alert, StatusBar, ActivityIndicator, Linking, Modal, TextInput, FlatList, KeyboardAvoidingView, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Icon from "react-native-vector-icons/Feather";
@@ -26,7 +26,7 @@ const getStatusIndex = (status) => {
 };
 
 // ─── Status Config ────────────────────────────────────────────────
-const STATUS_CONFIG= {
+const STATUS_CONFIG = {
   assigned: { label: "Worker Assigned", color: "#2563EB", bg: "#DBEAFE" },
   accepted: { label: "Worker Accepted", color: "#16A34A", bg: "#DCFCE7" },
   arrived: { label: "Worker Arrived", color: "#D97706", bg: "#FEF3C7" },
@@ -41,15 +41,15 @@ export default function AcceptedScreen() {
   const params = useLocalSearchParams();
   const bookingId = params.bookingId?.toString() || "";
 
-  const [booking, setBooking] = useState<any>(null);
+  const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [arriving, setArriving] = useState(false);
   const [workerLocation, setWorkerLocation] = useState(null);
-  const [userLocation, setUserLocation] = useState<any>(null);
+  const [userLocation, setUserLocation] = useState(null);
   const [showChat, setShowChat] = useState(false);
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState("");
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef < MapView > (null);
 
   // ─── Fetch booking ─────────────────────────────────────────────
   useEffect(() => {
@@ -128,6 +128,7 @@ export default function AcceptedScreen() {
       senderType: "user",
       timestamp: new Date().toISOString(),
     };
+    console.log("chat message::", msg)
     socketService.emit("chat-message", msg);
     setMessages((prev) => [...prev, msg]);
     setMessageText("");
@@ -142,18 +143,55 @@ export default function AcceptedScreen() {
     setArriving(true);
     try {
       const loc = await getCurrentLocation();
-      await arriveAtJob(
+      const jobUpdate = await arriveAtJob(
         booking.Job.id,
         loc?.latitude || booking.latitude,
         loc?.longitude || booking.longitude
       );
-      Alert.alert("Success", "Marked as worker arrived.");
+      console.log("jobUpdate::", jobUpdate.data)
+      if (jobUpdate.success) {
+        router.push({
+          pathname: "/booking/arrived",
+          params: { jobData: JSON.stringify(jobUpdate.data) },
+        });
+      }
       fetchBooking();
     } catch (error) {
       Alert.alert("Error", error.message || "Failed to update job status.");
     } finally {
       setArriving(false);
     }
+  };
+
+  const handleContinue = async () => {
+
+    switch (jobStatus) {
+      case "arrived":
+        console.log("booking::",booking)
+        router.push({
+          pathname: "/booking/arrived",
+          params: { jobData: JSON.stringify(booking.Job) },
+        });
+        break;
+    
+      case "in-progress":
+        router.push({
+          pathname: "/booking/in-progress",
+          params: { jobData: JSON.stringify(booking) },
+        });
+        break;
+    
+      case "completed":
+        router.push({
+          pathname: "/booking/completed",
+          params: { jobData: JSON.stringify(booking) },
+        });
+        break;
+    
+      default:
+        break;
+    }
+
   };
 
   // ─── Handle Call ───────────────────────────────────────────────
@@ -534,7 +572,7 @@ export default function AcceptedScreen() {
         </View>
 
         {/* Worker Arrived Button */}
-        {jobStatus !== "arrived" && jobStatus !== "in-progress" && jobStatus !== "completed" && (
+        {jobStatus !== "arrived" && jobStatus !== "in-progress" && jobStatus !== "completed" ? (
           <TouchableOpacity onPress={handleWorkerArrived} disabled={arriving} activeOpacity={0.85}>
             <View
               style={{
@@ -552,6 +590,27 @@ export default function AcceptedScreen() {
             >
               <Text style={{ fontSize: 16, fontWeight: "800", color: "#FFFFFF" }}>
                 {arriving ? "Updating..." : "Worker Arrived? →"}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        ):(
+          <TouchableOpacity onPress={handleContinue} disabled={arriving} activeOpacity={0.85}>
+            <View
+              style={{
+                borderRadius: 50,
+                paddingVertical: 18,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: arriving ? "#9CA3AF" : "#17381B",
+                shadowColor: "#17381B",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 4,
+              }}
+            >
+              <Text style={{ fontSize: 16, fontWeight: "800", color: "#FFFFFF" }}>
+                Continue →
               </Text>
             </View>
           </TouchableOpacity>

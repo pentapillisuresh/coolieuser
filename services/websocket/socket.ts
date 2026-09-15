@@ -4,7 +4,7 @@ import { getToken } from '../../src/utils/storage';
 
 const socketUrl =
   Constants.expoConfig?.extra?.socketUrl ||
-  'ws://192.168.0.8:3000';
+  'ws://192.168.0.12:3000';
 
 console.log('🔌 Socket URL:', socketUrl);
 

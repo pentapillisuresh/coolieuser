@@ -85,11 +85,14 @@ async function geocodeAddress(address) {
     servicePrice = 0,
     scheduledDate,
     scheduledTime,
+    addressId,
     address,
+    latitude,
+    longitude,
     bookingType,
     details = {},
   } = payload;
-
+console.log("rrr::",payload)
   // ─── State ──────────────────────────────────────────────────────
   const [loading, setLoading] = useState(false);
   const [couponCode, setCouponCode] = useState("");
@@ -98,23 +101,42 @@ async function geocodeAddress(address) {
   const [isApplying, setIsApplying] = useState(false);
   const [couponMessage, setCouponMessage] = useState(null);
   const [couponError, setCouponError] = useState(null);
-  const [latitude, setLatitude] = useState("17.333");
-  const [longitude, setLongitude] = useState("83.333");
-
-  const basePrice = Number(servicePrice) || 0;
+  const [location, setLocation] = useState({
+    latitude: latitude ?? null,
+    longitude: longitude ?? null,
+  });
+    const basePrice = Number(servicePrice) || 0;
   const breakdown = getPriceBreakdown(basePrice, appliedDiscount);
 
-  useEffect(()=>{
-    const getLocation=async ()=>{
-      const location = await geocodeAddress(address);
-      if (location) {
-        setLongitude(location.longitude);
-        setLatitude(location.latitude);
-        console.log(location.latitude, location.longitude);
+  useEffect(() => {
+    const getLocation = async () => {
+      if (!address || (latitude != null && longitude != null)) {
+        return;
       }
-    }
+  
+      try {
+        const result = await geocodeAddress(address);
+  
+        if (result) {
+          setLocation({
+            latitude: result.latitude,
+            longitude: result.longitude,
+          });
+  
+          console.log(
+            "getLocation:::",
+            result.latitude,
+            result.longitude
+          );
+        }
+      } catch (error) {
+        console.error("Failed to geocode address:", error);
+      }
+    };
+  
     getLocation();
-  },[address])
+  }, [address, latitude, longitude]);
+  
 
   useEffect(() => {
 
@@ -230,6 +252,7 @@ async function geocodeAddress(address) {
         scheduledTime: convertToMySQLTime(scheduledTime) || "10:00:00",
         specialInstructions,
         latitude,
+        addressId,
         longitude,
         details: {
           ...details,

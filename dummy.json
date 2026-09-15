@@ -340,7 +340,6 @@ category: [
 "categoryName": "Home Repairs & Handyman",
 "issueDescription": "rrr"
 }
-
 //bookings item
 {
 "Job": null,
@@ -440,4 +439,313 @@ category: [
 "totalAmount": "618.00",
 "updatedAt": "2026-09-07T21:02:33.000Z",
 "userId": 2
+}
+
+[
+{
+    "address": null,
+    "country": "India",
+    "createdAt": "2026-09-13T20:44:05.000Z",
+    "deletedAt": null,
+    "id": 1,
+    "isDefault": true,
+    "label": "Other",
+    "latitude": 17.717254510438245,
+    "longitude": 83.297496791929,
+    "placeId": null,
+    "updatedAt": "2026-09-13T20:44:05.000Z",
+    "userId": 2
+},
+{
+    "address": null,
+    "country": "India",
+    "createdAt": "2026-09-13T20:49:19.000Z",
+    "deletedAt": null,
+    "id": 2,
+    "isDefault": false,
+    "label": "Other",
+    "latitude": 17.734321678192586,
+    "longitude": 83.312983866781,
+    "placeId": null,
+    "updatedAt": "2026-09-13T20:49:19.000Z",
+    "userId": 2
+}
+]
+
+{
+"data": {
+    "afterPhotos": null,
+    "assignedAt": "2026-09-14T10:43:21.000Z",
+    "beforePhotos": null,
+    "bookingId": 12,
+    "completedAt": null,
+    "confirmationOtp": null,
+    "createdAt": "2026-09-14T10:43:21.000Z",
+    "deletedAt": null,
+    "feedback": null,
+    "id": 10,
+    "notes": null,
+    "otpExpiry": null,
+    "rating": null,
+    "startedAt": null,
+    "status": "arrived",
+    "updatedAt": "2026-09-14T12:52:58.336Z",
+    "userLatitude": null,
+    "userLongitude": null,
+    "workerId": 1,
+    "workerLatitude": 17.717277185986486,
+    "workerLongitude": 83.29747265204787
+},
+"success": true
+}
+
+{
+"GST": "66.00",
+"Job": {
+    "Worker": {
+        "User": [Object
+        ],
+        "createdAt": "2026-09-09T16:43:07.000Z",
+        "description": "Experienced electrician with 5 years of residential and commercial electrical work.",
+        "experience": 5,
+        "id": 1,
+        "isVerified": true,
+        "latitude": 17.6935526,
+        "longitude": 83.2921297,
+        "profession": "Home Repairs & Handyman",
+        "rating": 0,
+        "schedule": [Array
+        ],
+        "status": "active",
+        "totalJobs": 0,
+        "updatedAt": "2026-09-09T16:43:07.000Z",
+        "userId": 3
+    },
+    "afterPhotos": null,
+    "assignedAt": "2026-09-14T10:43:21.000Z",
+    "beforePhotos": null,
+    "bookingId": 12,
+    "completedAt": null,
+    "confirmationOtp": null,
+    "createdAt": "2026-09-14T10:43:21.000Z",
+    "deletedAt": null,
+    "feedback": null,
+    "id": 10,
+    "notes": null,
+    "otpExpiry": null,
+    "rating": null,
+    "startedAt": null,
+    "status": "arrived",
+    "updatedAt": "2026-09-14T17:57:39.000Z",
+    "userLatitude": null,
+    "userLongitude": null,
+    "workerId": 1,
+    "workerLatitude": 17.717277185986486,
+    "workerLongitude": 83.29747265204787
+},
+"Payment": {
+    "amount": "432.00",
+    "bookingId": 12,
+    "createdAt": "2026-09-14T10:45:14.000Z",
+    "currency": "INR",
+    "gatewayResponse": {
+        "amount": 43200,
+        "amount_due": 43200,
+        "amount_paid": 0,
+        "attempts": 0,
+        "created_at": 1789382714,
+        "currency": "INR",
+        "entity": "order",
+        "id": "order_Tbt9MYR9lOuscc",
+        "notes": [Object
+        ],
+        "offer_id": null,
+        "razorpay_payment_id": "pay_Tbt9nqSsoU7kYG",
+        "razorpay_signature": "ec50f504cc81823e34c0aba677823eaa6ff5bdf7d3a700d799446bb4251c98c1",
+        "receipt": "booking_12",
+        "status": "created"
+    },
+    "id": 10,
+    "paidAt": "2026-09-14T10:45:47.000Z",
+    "paymentMethod": "razorpay",
+    "razorpayOrderId": "order_Tbt9MYR9lOuscc",
+    "razorpayPaymentId": "pay_Tbt9nqSsoU7kYG",
+    "razorpaySignature": "ec50f504cc81823e34c0aba677823eaa6ff5bdf7d3a700d799446bb4251c98c1",
+    "status": "paid",
+    "transactionId": "pay_Tbt9nqSsoU7kYG",
+    "updatedAt": "2026-09-14T10:45:47.000Z",
+    "webhookStatus": "pending"
+},
+"Service": {
+    "Category": {
+        "createdAt": "2026-08-03T20:56:19.000Z",
+        "deletedAt": null,
+        "description": "Electrician, plumber, carpenter",
+        "icon": "Hammer",
+        "id": 5,
+        "image": "https://picsum.photos/seed/handyman/400/300",
+        "isActive": true,
+        "name": "Home Repairs & Handyman",
+        "slug": "home-repairs-handyman",
+        "sortOrder": 5,
+        "updatedAt": "2026-08-03T20:56:19.000Z"
+    },
+    "basePrice": "349.00",
+    "categoryId": 5,
+    "createdAt": "2026-08-03T20:56:19.000Z",
+    "deletedAt": null,
+    "description": "Switchboard, socket, fan",
+    "duration": 60,
+    "id": 21,
+    "image": "https://picsum.photos/seed/electrician/200/150",
+    "isActive": true,
+    "metadata": {
+        "formFields": [Array
+        ],
+        "priceCalculation": [Object
+        ]
+    },
+    "name": "Electrician",
+    "slug": "electrician",
+    "updatedAt": "2026-08-03T20:56:19.000Z"
+},
+"User": {
+    "id": 2,
+    "mobile": "9494130830",
+    "name": "A Ravi Kumar"
+},
+"address": "31-17-7, Bangaramma Metta, Daba Gardens, Allipuram, Visakhapatnam, Andhra Pradesh 530004, India",
+"addressId": 3,
+"cancellationReason": null,
+"cancelledAt": null,
+"convenianceCharges": "17.00",
+"createdAt": "2026-09-14T10:43:21.000Z",
+"deletedAt": null,
+"details": {
+    "bookingType": "schedule",
+    "categoryName": "Home Repairs & Handyman",
+    "issueDescription": "please replace new switch board",
+    "serviceName": "Electrician",
+    "serviceType": "Socket Replacement"
+},
+"discountAmount": "0.00",
+"estimatedArrival": null,
+"estimatedDurationMinutes": null,
+"groupId": null,
+"id": 12,
+"latitude": 17.717277185986486,
+"longitude": 83.29747265204787,
+"paymentStatus": "paid",
+"scheduledDate": "2026-09-14",
+"scheduledTime": "17:00:00",
+"serviceId": 21,
+"servicePrice": "349.00",
+"specialInstructions": "Please use havels",
+"status": "completed",
+"totalAmount": "432.00",
+"updatedAt": "2026-09-14T10:45:47.000Z",
+"userId": 2
+}
+
+{
+"Booking": {
+    "GST": "66.00",
+    "Service": {
+        "Category": [Object
+        ],
+        "basePrice": "349.00",
+        "categoryId": 5,
+        "createdAt": "2026-08-03T20:56:19.000Z",
+        "deletedAt": null,
+        "description": "Switchboard, socket, fan",
+        "duration": 60,
+        "id": 21,
+        "image": "https://picsum.photos/seed/electrician/200/150",
+        "isActive": true,
+        "metadata": [Object
+        ],
+        "name": "Electrician",
+        "slug": "electrician",
+        "updatedAt": "2026-08-03T20:56:19.000Z"
+    },
+    "User": {
+        "id": 2,
+        "mobile": "9494130830",
+        "name": "A Ravi Kumar"
+    },
+    "address": "31-17-7, Bangaramma Metta, Daba Gardens, Allipuram, Visakhapatnam, Andhra Pradesh 530004, India",
+    "addressId": 3,
+    "cancellationReason": null,
+    "cancelledAt": null,
+    "convenianceCharges": "17.00",
+    "createdAt": "2026-09-14T10:43:21.000Z",
+    "deletedAt": null,
+    "details": {
+        "bookingType": "schedule",
+        "categoryName": "Home Repairs & Handyman",
+        "issueDescription": "please replace new switch board",
+        "serviceName": "Electrician",
+        "serviceType": "Socket Replacement"
+    },
+    "discountAmount": "0.00",
+    "estimatedArrival": null,
+    "estimatedDurationMinutes": null,
+    "groupId": null,
+    "id": 12,
+    "latitude": 17.717277185986486,
+    "longitude": 83.29747265204787,
+    "paymentStatus": "paid",
+    "scheduledDate": "2026-09-14",
+    "scheduledTime": "17:00:00",
+    "serviceId": 21,
+    "servicePrice": "349.00",
+    "specialInstructions": "Please use havels",
+    "status": "completed",
+    "totalAmount": "432.00",
+    "updatedAt": "2026-09-14T10:45:47.000Z",
+    "userId": 2
+},
+
+"Worker": {
+    "User": {
+        "id": 3,
+        "mobile": "94941272627",
+        "name": "Deva mani"
+    },
+    "createdAt": "2026-09-09T16:43:07.000Z",
+    "description": "Experienced electrician with 5 years of residential and commercial electrical work.",
+    "experience": 5,
+    "id": 1,
+    "isVerified": true,
+    "latitude": 17.6935526,
+    "longitude": 83.2921297,
+    "profession": "Home Repairs & Handyman",
+    "rating": 0,
+    "schedule": [],
+    "status": "active",
+    "totalJobs": 0,
+    "updatedAt": "2026-09-09T16:43:07.000Z",
+    "userId": 3
+},
+"afterPhotos": null,
+"assignedAt": "2026-09-14T10:43:21.000Z",
+"beforePhotos": null,
+"bookingId": 12,
+"completedAt": null,
+"confirmationOtp": "3333",
+"createdAt": "2026-09-14T10:43:21.000Z",
+"deletedAt": null,
+"feedback": null,
+"id": 10,
+"notes": null,
+"otpExpiry": null,
+"rating": null,
+"startedAt": null,
+"status": "arrived",
+"updatedAt": "2026-09-14T17:57:39.000Z",
+"userLatitude": null,
+"userLongitude": null,
+"workerId": 1,
+"workerLatitude": 17.717277185986486,
+"workerLongitude": 83.29747265204787
 }

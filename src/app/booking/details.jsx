@@ -1,67 +1,101 @@
 import { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Platform, KeyboardAvoidingView, StatusBar, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  Platform,
+  KeyboardAvoidingView,
+  StatusBar,
+  ActivityIndicator,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Icon from "react-native-vector-icons/Feather";
 import Icon2 from "react-native-vector-icons/MaterialIcons";
 import { getServiceById } from "../../../services/api/services";
+import { getMyAddresses, createAddress } from "../../../services/api/address"; // ✅ NEW
+import LocationPickerModal from "../../components/LocationPickerModal";
 
-// ─── Static data for date/time selection ────────────────────────
+// ─── Static data ────────────────────────────────────────────────
 const TIMES = [
   "9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
   "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM",
 ];
+
 const getDateLabels = () => {
   const dates = [];
   const today = new Date();
-
   for (let i = 0; i < 7; i++) {
     const date = new Date(today);
     date.setDate(today.getDate() + i);
-
-    if (i === 0) {
-      dates.push("Today");
-    } else if (i === 1) {
-      dates.push("Tomorrow");
-    } else {
-      const dayName = date.toLocaleDateString("en-US", {
-        weekday: "short",
-      });
-
+    if (i === 0) dates.push("Today");
+    else if (i === 1) dates.push("Tomorrow");
+    else {
+      const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
       const day = date.getDate();
-
       dates.push(`${dayName} ${day}`);
     }
   }
-
   return dates;
 };
 
 const DATES_LABELS = getDateLabels();
 
-// ─── Helper to convert date label to actual date string ────────
+// ─── Time helpers ───────────────────────────────────────────────
+const timeToMinutes = (time) => {
+  const [timePart, period] = time.split(" ");
+  let [h, m] = timePart.split(":").map(Number);
+  if (period === "PM" && h !== 12) h += 12;
+  if (period === "AM" && h === 12) h = 0;
+  return h * 60 + m;
+};
+
+const isSlotInPast = (slot) => {
+  const now = new Date();
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+  return timeToMinutes(slot) <= nowMins;
+};
+
+const getNextAvailableSlot = () => {
+  const now = new Date();
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+  for (const t of TIMES) {
+    if (timeToMinutes(t) > nowMins) return t;
+  }
+  return null; // no slots left today
+};
+
+// Use local date (not UTC) for correctness
+const toLocalISO = (d) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
 const getDateString = (label) => {
   const today = new Date();
-  if (label === "Today") return today.toISOString().split("T")[0];
+  if (label === "Today") return toLocalISO(today);
   if (label === "Tomorrow") {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split("T")[0];
+    return toLocalISO(tomorrow);
   }
-  // For labels like "Wed 26", we can parse day and month
   const parts = label.split(" ");
   if (parts.length === 2) {
     const day = parseInt(parts[1]);
     const month = today.getMonth();
     const year = today.getFullYear();
-    // Assume it's this month (if day < today's day, add month)
     let dateObj = new Date(year, month, day);
-    if (dateObj < today) {
+    if (dateObj < today && dateObj.toDateString() !== today.toDateString()) {
       dateObj = new Date(year, month + 1, day);
     }
-    return dateObj.toISOString().split("T")[0];
+    return toLocalISO(dateObj);
   }
-  return today.toISOString().split("T")[0];
+  return toLocalISO(today);
 };
 
 export default function BookingDetailsScreen() {
@@ -77,11 +111,28 @@ export default function BookingDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [service, setService] = useState(null);
   const [formData, setFormData] = useState({});
+
+  // ── Date/time state ────────────────────────────────────────
   const [selectedDate, setSelectedDate] = useState("Today");
   const [selectedTime, setSelectedTime] = useState("10:00 AM");
   const [bookingType, setBookingType] = useState("now");
-  const [address, setAddress] = useState("");
-  
+
+  // ── Address book state ─────────────────────────────────────
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddress, setSelectedAddress] = useState(null); // full address object
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [addressLoading, setAddressLoading] = useState(false);
+  const [savingAddress, setSavingAddress] = useState(false);
+
+  // ── Manual address (when adding new) ───────────────────────
+  const [manualAddress, setManualAddress] = useState({
+    address: "",
+    latitude: null,
+    longitude: null,
+  });
+  const [showLocationModal, setShowLocationModal] = useState(false);
+
+  // ── Init ───────────────────────────────────────────────────
   useEffect(() => {
     if (!serviceId) {
       Alert.alert("Error", "Service ID is missing", [
@@ -89,15 +140,25 @@ export default function BookingDetailsScreen() {
       ]);
       return;
     }
-
     fetchService();
+    fetchAddresses();
+
+    // Set initial "Book Now" slot
+    const nextSlot = getNextAvailableSlot();
+    if (nextSlot) {
+      setSelectedTime(nextSlot);
+      setSelectedDate("Today");
+    } else {
+      // No slots left today, default to tomorrow 9:00 AM
+      setSelectedDate("Tomorrow");
+      setSelectedTime(TIMES[0]);
+    }
   }, [serviceId]);
 
   const fetchService = async () => {
     setLoading(true);
     try {
       const response = await getServiceById(parseInt(serviceId));
-      console.log("fetched service::", response.data)
       setService(response.data);
     } catch (error) {
       console.error("Failed to fetch service:", error);
@@ -107,46 +168,135 @@ export default function BookingDetailsScreen() {
     }
   };
 
-  // ─── Handle form field changes ────────────────────────────────
-  const handleFieldChange = (key, value) => {
-    setFormData((prev) => ({
-      ...(prev || {}),
-      [key]: value,
-    }));
+  // ── Fetch saved addresses (past orders) ────────────────────
+  const fetchAddresses = async () => {
+    setAddressLoading(true);
+    try {
+      const res = await getMyAddresses({ page: 1, limit: 50 });
+      const list = res.data.items || [];
+      console.log("address list ::",list)
+      setAddresses(list);
+
+      if (list.length === 0) {
+        // No addresses → show the form directly
+        setShowAddressForm(true);
+      } else {
+        // Auto-select default or first
+        const def = list.find((a) => a.isDefault) || list[0];
+        setSelectedAddress(def);
+        setShowAddressForm(false);
+      }
+    } catch (err) {
+      console.error("Failed to fetch addresses:", err);
+      // Fallback to showing form
+      setShowAddressForm(true);
+    } finally {
+      setAddressLoading(false);
+    }
   };
-  // ─── Build the payload for summary ────────────────────────────
-  const handleNext = () => {
-    // Validate required fields from service metadata
+
+  const handleFieldChange = (key, value) => {
+    setFormData((prev) => ({ ...(prev || {}), [key]: value }));
+  };
+
+  // ── Booking type change ────────────────────────────────────
+  const handleBookingTypeChange = (val) => {
+    setBookingType(val);
+    if (val === "now") {
+      const nextSlot = getNextAvailableSlot();
+      if (nextSlot) {
+        setSelectedDate("Today");
+        setSelectedTime(nextSlot);
+      } else {
+        setSelectedDate("Tomorrow");
+        setSelectedTime(TIMES[0]);
+      }
+    }
+  };
+
+  // ── Address selection ──────────────────────────────────────
+  const handleSelectAddress = (addr) => {
+    setSelectedAddress(addr);
+  };
+
+  // ── Add New Address → show form ────────────────────────────
+  const handleAddNewAddress = () => {
+    setShowAddressForm(true);
+    setSelectedAddress(null);
+    setManualAddress({ address: "", latitude: null, longitude: null });
+  };
+
+  // ── When user picks from the map modal ─────────────────────
+  const handleLocationSelect = ({ latitude, longitude, address }) => {
+    setManualAddress({ address: address, latitude, longitude });
+  };
+
+  // ── Validate + navigate ────────────────────────────────────
+  const handleNext = async () => {
     const fields = service?.metadata?.formFields || [];
-    const requiredFields = fields?.filter((f) => f.required);
+    const requiredFields = fields.filter((f) => f.required);
     const missingFields = requiredFields.filter((field) => {
-      const value = formData?.[field.key];
-
-      if (value === null || value === undefined) {
-        return true;
-      }
-
-      if (typeof value === "string" && value.trim() === "") {
-        return true;
-      }
-
+      const v = formData?.[field.key];
+      if (v === null || v === undefined) return true;
+      if (typeof v === "string" && v.trim() === "") return true;
       return false;
     });
 
     if (missingFields.length > 0) {
       Alert.alert(
         "Required Fields",
-        `Please fill in: ${missingFields?.map((f) => f.label).join(", ")}`
+        `Please fill in: ${missingFields.map((f) => f.label).join(", ")}`
       );
       return;
     }
 
+    // Resolve final address
+    let finalAddress, finalLat, finalLng, addressId = null;
 
-    // Build date/time for API
+    try {
+      if (showAddressForm || !selectedAddress) {
+        // Using manual address
+        if (!manualAddress.address || !manualAddress.latitude || !manualAddress.longitude) {
+          Alert.alert("Address Required", "Please pick a location for the new address");
+          return;
+        }
+        setSavingAddress(true); // optional loading flag
+
+        const created = await createAddress({
+          label: "Other",
+          address: manualAddress.address,
+          latitude: manualAddress.latitude,
+          longitude: manualAddress.longitude,
+          isDefault: addresses.length === 0, // first address becomes default
+        });
+        addressId = created.data.id;
+        finalAddress = created.data.address;
+        finalLat = created.data.latitude;
+        finalLng = created.data.longitude;
+
+        setAddresses((prev) => [created.data, ...prev]);
+        setSelectedAddress(created.data);
+        setShowAddressForm(false);
+      } else {
+        // Using selected saved address
+        finalAddress = selectedAddress.address;
+        finalLat = selectedAddress.latitude;
+        finalLng = selectedAddress.longitude;
+        addressId = selectedAddress.id;
+      }
+
+    } catch (error) {
+      console.error("Address save failed:", err);
+      Alert.alert("Error", err.message || "Failed to save address");
+      setSavingAddress(false);
+      return;
+    } finally {
+      setSavingAddress(false);
+    }
+
     const scheduledDate = getDateString(selectedDate);
     const scheduledTime = selectedTime;
 
-    // Build the payload for summary (and eventually booking)
     const payload = {
       categoryId,
       categoryName,
@@ -155,19 +305,21 @@ export default function BookingDetailsScreen() {
       servicePrice,
       scheduledDate,
       scheduledTime,
-      address: address.trim(),
+      addressId,
+      address: finalAddress,
+      latitude: finalLat,
+      longitude: finalLng,
       bookingType,
-      details: formData, // all dynamic fields
+      details: formData,
     };
-    console.log("rrr::", payload);
+
     router.push({
       pathname: "/booking/summary",
-      params: {
-        bookingPayload: JSON.stringify(payload),
-      },
+      params: { bookingPayload: JSON.stringify(payload) },
     });
   };
 
+  // ── Loading / not found ────────────────────────────────────
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F3F8EF" }}>
@@ -243,95 +395,81 @@ export default function BookingDetailsScreen() {
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 40 }}
         >
-          {/* Book Type */}
-          <View
-            style={{
-              backgroundColor: "#FFFFFF",
-              borderRadius: 18,
-              padding: 16,
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.05,
-              shadowRadius: 8,
-              elevation: 3,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 15,
-                fontWeight: "800",
-                color: "#1F2937",
-                marginBottom: 12,
-              }}
-            >
-              When do you need the service?
-            </Text>
+          {/* ─── Book Type ────────────────────────────────────── */}
+          <View style={cardStyle}>
+            <Text style={sectionTitle}>When do you need the service?</Text>
             <View style={{ flexDirection: "row", gap: 10 }}>
               {[
                 { val: "now", label: "⚡ Book Now", sub: "Worker in ~30 min" },
                 { val: "schedule", label: "📅 Schedule Later", sub: "Pick date & time" },
-              ]?.map((opt) => (
+              ].map((opt) => (
                 <TouchableOpacity
-                  key={opt?.val}
-                  onPress={() => setBookingType(opt?.val)}
+                  key={opt.val}
+                  onPress={() => handleBookingTypeChange(opt.val)}
                   style={{
                     flex: 1,
                     borderRadius: 14,
                     padding: 14,
                     borderWidth: 2,
-                    borderColor: bookingType === opt?.val ? "#17381B" : "#E5E7EB",
-                    backgroundColor: bookingType === opt?.val ? "#E8F5E9" : "#F8FAFF",
+                    borderColor: bookingType === opt.val ? "#17381B" : "#E5E7EB",
+                    backgroundColor: bookingType === opt.val ? "#E8F5E9" : "#F8FAFF",
                   }}
                 >
                   <Text
                     style={{
                       fontSize: 14,
                       fontWeight: "800",
-                      color: bookingType === opt?.val ? "#17381B" : "#1F2937",
+                      color: bookingType === opt.val ? "#17381B" : "#1F2937",
                       marginBottom: 3,
                     }}
                   >
                     {opt.label}
                   </Text>
-                  <Text style={{ fontSize: 11, color: "#6B7280" }}>{opt?.sub}</Text>
+                  <Text style={{ fontSize: 11, color: "#6B7280" }}>{opt.sub}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-          </View>
 
-          {/* Date Selection */}
-          {bookingType === "schedule" && (
-            <View
-              style={{
-                backgroundColor: "#FFFFFF",
-                borderRadius: 18,
-                padding: 16,
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.05,
-                shadowRadius: 8,
-                elevation: 3,
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                <Icon2 name="calendar-today" size={18} color="#17381B" />
-                <Text style={{ fontSize: 15, fontWeight: "800", color: "#1F2937" }}>
-                  Select Date
+            {bookingType === "now" && (
+              <View
+                style={{
+                  marginTop: 12,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
+                  backgroundColor: "#E8F5E9",
+                  padding: 10,
+                  borderRadius: 10,
+                }}
+              >
+                <Icon name="clock" size={14} color="#17381B" />
+                <Text style={{ fontSize: 12, color: "#17381B", fontWeight: "600" }}>
+                  Today · {selectedTime} · Earliest available slot
                 </Text>
               </View>
+            )}
+          </View>
+
+          {/* ─── Date & Time (Schedule) ────────────────────────── */}
+          {bookingType === "schedule" && (
+            <View style={cardStyle}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                <Icon2 name="calendar-today" size={18} color="#17381B" />
+                <Text style={sectionTitle2}>Select Date</Text>
+              </View>
+
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={{ gap: 8 }}
                 style={{ flexGrow: 0 }}
               >
-                {DATES_LABELS?.map((d) => (
+                {DATES_LABELS.map((d) => (
                   <TouchableOpacity
                     key={d}
                     onPress={() => setSelectedDate(d)}
@@ -359,61 +497,59 @@ export default function BookingDetailsScreen() {
 
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 16, marginBottom: 14 }}>
                 <Icon name="clock" size={18} color="#17381B" />
-                <Text style={{ fontSize: 15, fontWeight: "800", color: "#1F2937" }}>
-                  Select Time
-                </Text>
+                <Text style={sectionTitle2}>Select Time</Text>
               </View>
+
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {TIMES?.map((t) => (
-                  <TouchableOpacity
-                    key={t}
-                    onPress={() => setSelectedTime(t)}
-                    style={{
-                      paddingHorizontal: 14,
-                      paddingVertical: 9,
-                      borderRadius: 12,
-                      backgroundColor: selectedTime === t ? "#17381B" : "#F3F8EF",
-                      borderWidth: selectedTime === t ? 0 : 1,
-                      borderColor: "#E5E7EB",
-                    }}
-                  >
-                    <Text
+                {TIMES.map((t) => {
+                  const disabled = selectedDate === "Today" && isSlotInPast(t);
+                  return (
+                    <TouchableOpacity
+                      key={t}
+                      onPress={() => !disabled && setSelectedTime(t)}
+                      disabled={disabled}
                       style={{
-                        fontSize: 13,
-                        fontWeight: "600",
-                        color: selectedTime === t ? "#FFFFFF" : "#1F2937",
+                        paddingHorizontal: 14,
+                        paddingVertical: 9,
+                        borderRadius: 12,
+                        backgroundColor: disabled
+                          ? "#F3F4F6"
+                          : selectedTime === t
+                            ? "#17381B"
+                            : "#F3F8EF",
+                        borderWidth: disabled || selectedTime === t ? 0 : 1,
+                        borderColor: "#E5E7EB",
+                        opacity: disabled ? 0.5 : 1,
                       }}
                     >
-                      {t}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: "600",
+                          color: disabled
+                            ? "#9CA3AF"
+                            : selectedTime === t
+                              ? "#FFFFFF"
+                              : "#1F2937",
+                        }}
+                      >
+                        {t}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
           )}
 
-          {/* Dynamic Form Fields */}
-          <View
-            style={{
-              backgroundColor: "#FFFFFF",
-              borderRadius: 18,
-              padding: 16,
-              gap: 14,
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.05,
-              shadowRadius: 8,
-              elevation: 3,
-            }}
-          >
-            <Text style={{ fontSize: 15, fontWeight: "800", color: "#1F2937" }}>
-              Service Information
-            </Text>
-            {fields?.length > 0 ? (
-              fields?.map((field) => {
-                const value = formData[field?.key] || "";
+          {/* ─── Dynamic Form Fields ───────────────────────────── */}
+          <View style={[cardStyle, { gap: 14 }]}>
+            <Text style={sectionTitle}>Service Information</Text>
+            {fields.length > 0 ? (
+              fields.map((field) => {
+                const value = formData[field.key] || "";
                 return (
-                  <View key={field?.key}>
+                  <View key={field.key}>
                     <View
                       style={{
                         flexDirection: "row",
@@ -423,10 +559,10 @@ export default function BookingDetailsScreen() {
                       }}
                     >
                       <Text style={{ fontSize: 13, fontWeight: "700", color: "#1F2937" }}>
-                        {field?.label}
-                        {field?.required && <Text style={{ color: "#DC2626" }}>*</Text>}
+                        {field.label}
+                        {field.required && <Text style={{ color: "#DC2626" }}>*</Text>}
                       </Text>
-                      {!field?.required && (
+                      {!field.required && (
                         <Text
                           style={{
                             fontSize: 11,
@@ -441,7 +577,8 @@ export default function BookingDetailsScreen() {
                         </Text>
                       )}
                     </View>
-                    {field?.type === "select" ? (
+
+                    {field.type === "select" ? (
                       <View
                         style={{
                           backgroundColor: "#F3F8EF",
@@ -452,10 +589,10 @@ export default function BookingDetailsScreen() {
                           paddingVertical: 12,
                         }}
                       >
-                        {field?.options?.map((opt) => (
+                        {field.options?.map((opt) => (
                           <TouchableOpacity
                             key={opt}
-                            onPress={() => handleFieldChange(field?.key, opt)}
+                            onPress={() => handleFieldChange(field.key, opt)}
                             style={{
                               paddingVertical: 8,
                               borderBottomWidth: 1,
@@ -466,15 +603,13 @@ export default function BookingDetailsScreen() {
                             }}
                           >
                             <Text style={{ fontSize: 14, color: "#1F2937" }}>{opt}</Text>
-                            {value === opt && (
-                              <Icon name="check" size={16} color="#17381B" />
-                            )}
+                            {value === opt && <Icon name="check" size={16} color="#17381B" />}
                           </TouchableOpacity>
                         ))}
                       </View>
                     ) : field.type === "boolean" ? (
                       <TouchableOpacity
-                        onPress={() => handleFieldChange(field?.key, !value)}
+                        onPress={() => handleFieldChange(field.key, !value)}
                         style={{
                           flexDirection: "row",
                           alignItems: "center",
@@ -494,7 +629,7 @@ export default function BookingDetailsScreen() {
                             color: value ? "#FFFFFF" : "#1F2937",
                           }}
                         >
-                          {field?.label}
+                          {field.label}
                         </Text>
                         <View
                           style={{
@@ -519,15 +654,15 @@ export default function BookingDetailsScreen() {
                           color: "#1F2937",
                           borderWidth: 1.5,
                           borderColor: value ? "#17381B" : "#E5E7EB",
-                          height: field?.type === "textarea" ? 90 : 52,
-                          textAlignVertical: field?.type === "textarea" ? "top" : "center",
+                          height: field.type === "textarea" ? 90 : 52,
+                          textAlignVertical: field.type === "textarea" ? "top" : "center",
                         }}
-                        placeholder={field.placeholder || `Enter ${field?.label.toLowerCase()}`}
+                        placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
                         placeholderTextColor="#9CA3AF"
-                        keyboardType={field?.type === "number" ? "numeric" : "default"}
-                        multiline={field?.type === "textarea"}
+                        keyboardType={field.type === "number" ? "numeric" : "default"}
+                        multiline={field.type === "textarea"}
                         value={value}
-                        onChangeText={(t) => handleFieldChange(field?.key, t)}
+                        onChangeText={(t) => handleFieldChange(field.key, t)}
                       />
                     )}
                   </View>
@@ -538,37 +673,199 @@ export default function BookingDetailsScreen() {
             )}
           </View>
 
-          <View>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 8,
-              }}
-            >
-              <Text style={{ fontSize: 13, fontWeight: "700", color: "#1F2937" }}>
-                Address <Text style={{ color: "#DC2626" }}>*</Text>
+          {/* ─── Address Section ──────────────────────────────── */}
+          <View style={[cardStyle, { gap: 12 }]}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={sectionTitle}>
+                Delivery Address <Text style={{ color: "#DC2626" }}>*</Text>
               </Text>
+              {!showAddressForm && addresses.length > 0 && (
+                <TouchableOpacity onPress={handleAddNewAddress}>
+                  <Text style={{ fontSize: 12, color: "#17381B", fontWeight: "800" }}>
+                    + Add New
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
-            <TextInput
-              style={{
-                backgroundColor: "#F3F8EF",
-                borderRadius: 12,
-                padding: 14,
-                fontSize: 14,
-                color: "#1F2937",
-                borderWidth: 1.5,
-                borderColor: address ? "#17381B" : "#E5E7EB",
-                height: 80,
-                textAlignVertical: "top",
-              }}
-              placeholder="Enter your complete address"
-              placeholderTextColor="#9CA3AF"
-              multiline
-              value={address}
-              onChangeText={setAddress}
-            />
+
+            {addressLoading ? (
+              <ActivityIndicator size="small" color="#17381B" />
+            ) : (
+              <>
+                {/* Address list (saved) */}
+                {!showAddressForm && addresses.length > 0 && (
+                  <View style={{ gap: 10 }}>
+                    {addresses.map((addr) => {
+                      const isSelected = selectedAddress?.id === addr.id;
+                      return (
+                        <TouchableOpacity
+                          key={addr.id}
+                          onPress={() => handleSelectAddress(addr)}
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 12,
+                            backgroundColor: isSelected ? "#E8F5E9" : "#F9FAFB",
+                            borderRadius: 12,
+                            padding: 14,
+                            borderWidth: 1.5,
+                            borderColor: isSelected ? "#17381B" : "#E5E7EB",
+                          }}
+                        >
+                          <View
+                            style={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: 18,
+                              backgroundColor: isSelected ? "#17381B" : "#E5E7EB",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <Icon
+                              name={addr.label === "Home" ? "home" : "briefcase"}
+                              size={16}
+                              color={isSelected ? "#FFFFFF" : "#6B7280"}
+                            />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                              <Text style={{ fontSize: 13, fontWeight: "800", color: "#1F2937" }}>
+                                {addr.label || "Address"}
+                              </Text>
+                              {addr.isDefault && (
+                                <View
+                                  style={{
+                                    backgroundColor: "#DCFCE7",
+                                    paddingHorizontal: 6,
+                                    paddingVertical: 2,
+                                    borderRadius: 4,
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 9, fontWeight: "800", color: "#16A34A" }}>
+                                    DEFAULT
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+                            <Text
+                              style={{ fontSize: 12, color: "#6B7280", marginTop: 2 }}
+                              numberOfLines={2}
+                            >
+                              {addr.address}
+                            </Text>
+                          </View>
+                          {isSelected && <Icon name="check-circle" size={20} color="#16A34A" />}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {/* Manual address form (showAddressForm == true OR no saved addresses) */}
+                {showAddressForm && (
+                  <View style={{ gap: 10 }}>
+                    {addresses.length > 0 && (
+                      <TouchableOpacity
+                        onPress={() => {
+                          setShowAddressForm(false);
+                          const def = addresses.find((a) => a.isDefault) || addresses[0];
+                          setSelectedAddress(def);
+                        }}
+                        style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}
+                      >
+                        <Icon name="arrow-left" size={14} color="#17381B" />
+                        <Text style={{ fontSize: 12, color: "#17381B", fontWeight: "700" }}>
+                          Back to saved addresses
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+
+                    <TouchableOpacity
+                      onPress={() => setShowLocationModal(true)}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 12,
+                        backgroundColor: manualAddress.address ? "#F3F8EF" : "#17381B",
+                        borderRadius: 12,
+                        padding: 14,
+                        borderWidth: manualAddress.address ? 1 : 0,
+                        borderColor: "#17381B",
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
+                          backgroundColor: manualAddress.address ? "#17381B" : "rgba(255,255,255,0.2)",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Icon
+                          name="map-pin"
+                          size={16}
+                          color={manualAddress.address ? "#FFFFFF" : "#FFFFFF"}
+                        />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            color: manualAddress.address ? "#6B7280" : "rgba(255,255,255,0.8)",
+                            fontWeight: "600",
+                          }}
+                        >
+                          {manualAddress.address ? "Selected Location" : "Tap to pick on map"}
+                        </Text>
+                        {manualAddress.address ? (
+                          <Text
+                            style={{ fontSize: 13, color: "#1F2937", fontWeight: "700", marginTop: 2 }}
+                            numberOfLines={2}
+                          >
+                            {manualAddress.address}
+                          </Text>
+                        ) : (
+                          <Text style={{ fontSize: 14, color: "#FFFFFF", fontWeight: "800", marginTop: 2 }}>
+                            Pick Location on Map
+                          </Text>
+                        )}
+                      </View>
+                      <Icon
+                        name="chevron-right"
+                        size={18}
+                        color={manualAddress.address ? "#17381B" : "#FFFFFF"}
+                      />
+                    </TouchableOpacity>
+
+                    {manualAddress.address && (
+                      <TextInput
+                        style={{
+                          backgroundColor: "#F3F8EF",
+                          borderRadius: 12,
+                          padding: 14,
+                          fontSize: 14,
+                          color: "#1F2937",
+                          borderWidth: 1.5,
+                          borderColor: "#17381B",
+                          minHeight: 60,
+                          textAlignVertical: "top",
+                        }}
+                        value={manualAddress.address}
+                        onChangeText={(t) =>
+                          setManualAddress((prev) => ({ ...prev, address: t }))
+                        }
+                        placeholder="Add landmark, flat no., etc."
+                        placeholderTextColor="#9CA3AF"
+                        multiline
+                      />
+                    )}
+                  </View>
+                )}
+              </>
+            )}
           </View>
 
           {/* Info note */}
@@ -591,10 +888,15 @@ export default function BookingDetailsScreen() {
             </Text>
           </View>
 
-          {/* Next button */}
-          <TouchableOpacity onPress={handleNext} activeOpacity={0.85}>
-            <View
-              style={{
+          {/* Continue */}
+          <TouchableOpacity
+            onPress={handleNext}
+            disabled={savingAddress}
+            activeOpacity={0.85}
+            
+          >
+            <View 
+            style={{
                 borderRadius: 50,
                 paddingVertical: 18,
                 flexDirection: "row",
@@ -609,16 +911,54 @@ export default function BookingDetailsScreen() {
                 elevation: 4,
               }}
             >
-              <Text style={{ fontSize: 17, fontWeight: "800", color: "#FFFFFF" }}>
-                Continue to Summary
-              </Text>
-              <Icon name="chevron-right" size={20} color="#FFFFFF" strokeWidth={2.5} />
+              {savingAddress ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <>
+                  <Text style={{ fontSize: 17, fontWeight: "800", color: "#FFFFFF" }}>
+                    Continue to Summary
+                  </Text>
+                  <Icon name="chevron-right" size={20} color="#FFFFFF" strokeWidth={2.5} />
+                </>
+              )}
             </View>
           </TouchableOpacity>
-
           <View style={{ height: 20 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Location Picker Modal */}
+      <LocationPickerModal
+        visible={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        onSelect={handleLocationSelect}
+        initialAddress={manualAddress.address}
+      />
     </View>
   );
 }
+
+// ─── Shared styles ──────────────────────────────────────────────
+const cardStyle = {
+  backgroundColor: "#FFFFFF",
+  borderRadius: 18,
+  padding: 16,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.05,
+  shadowRadius: 8,
+  elevation: 3,
+};
+
+const sectionTitle = {
+  fontSize: 15,
+  fontWeight: "800",
+  color: "#1F2937",
+  marginBottom: 12,
+};
+
+const sectionTitle2 = {
+  fontSize: 15,
+  fontWeight: "800",
+  color: "#1F2937",
+};
