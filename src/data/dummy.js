@@ -1,4 +1,4 @@
-// ─── KOOLI App – Complete Dummy Data (All 30 Screens) ──────────────────────
+// ─── COOLI App – Complete Dummy Data (All 30 Screens) ──────────────────────
 
 export const COLORS = {
   primary: "#1A3C8F",
@@ -65,7 +65,7 @@ export const ONBOARDING_SLIDES = [
 export const CATEGORIES = [
   {
     id: "railway",
-    name: "Railway Koolie",
+    name: "Railway COOLIe",
     icon: "Train",
     color: "#E53E3E",
     bg: "#FEE2E2",
@@ -942,7 +942,7 @@ export const WALLET = {
       id: "t4",
       type: "credit",
       title: "Promo Cashback",
-      subtitle: "KOOLI50",
+      subtitle: "COOLI50",
       amount: 50,
       date: "Jun 23, 2024",
       icon: "Tag",
@@ -969,7 +969,7 @@ export const WALLET = {
   promos: [
     {
       id: "p1",
-      code: "KOOLI50",
+      code: "COOLI50",
       discount: "₹50 OFF",
       desc: "On bookings above ₹500",
       expiry: "Jul 31, 2024",
@@ -1125,7 +1125,7 @@ export const FAQ = [
   {
     id: "f2",
     q: "Are the workers verified?",
-    a: "Yes! All KOOLI workers undergo strict background verification including police verification and skill assessment.",
+    a: "Yes! All COOLI workers undergo strict background verification including police verification and skill assessment.",
   },
   {
     id: "f3",
@@ -1135,7 +1135,7 @@ export const FAQ = [
   {
     id: "f4",
     q: "What payment methods are accepted?",
-    a: "We accept UPI, Credit/Debit cards, Net Banking, KOOLI Wallet, and Cash.",
+    a: "We accept UPI, Credit/Debit cards, Net Banking, COOLI Wallet, and Cash.",
   },
   {
     id: "f5",
@@ -1206,7 +1206,7 @@ export const PAYMENT_METHODS = [
   {
     id: "pm4",
     type: "wallet",
-    name: "KOOLI Wallet",
+    name: "COOLI Wallet",
     detail: "Balance: ₹1,250",
     icon: "Wallet",
     default: false,

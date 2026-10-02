@@ -7,14 +7,27 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import Icon from "react-native-vector-icons/Feather";
 import Icon2 from "react-native-vector-icons/MaterialIcons";
 import Icon3 from "react-native-vector-icons/FontAwesome5";
-import {  getJobById, completeJob  } from "../../../services/api/job";
+import {  getJobById, completeJob, generateCompleteOTP  } from "../../../services/api/job";
 
 export default function InProgressScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams();
 
-  const jobId = String(params.jobId || "");
+  const rawJobData = params?.jobData;
+  
+  let jobID;
+  
+  try {
+    jobID =
+      typeof rawJobData === "string"
+        ? JSON.parse(rawJobData)
+        : rawJobData;
+  } catch (error) {
+    console.error("jobData JSON parse error:", error);
+    return;
+  }  
+  const jobId = String(jobID?.Job?.id ?? "");
 
   const [job, setJob] = useState(null);
   const [worker, setWorker] = useState(null);
@@ -55,7 +68,7 @@ export default function InProgressScreen() {
        */
       const status = String(jobData.data.status || "").toLowerCase();
 
-      if (status !== "inprogress") {
+      if (status !== "in-progress") {
         redirectAccordingToStatus(jobData.data.status, jobData.data);
         return;
       }
@@ -187,29 +200,18 @@ export default function InProgressScreen() {
   /**
    * Complete job
    */
-  const handleCompleteJob = async () => {
+  const handleVerifyCompleteJob = async () => {
     if (!jobId || !job) {
       return;
     }
 
     try {
       setCompleting(true);
-
-      /**
-       * Change job status in backend
-       */
-      const updatedJob = await updateJobStatus(jobId, "completed");
-
-      /**
-       * Update local state
-       */
-      setJob(updatedJob || { ...job, status: "completed" });
-
-      /**
-       * Navigate to completed screen
-       */
+      const verifyCompletionJob = await generateCompleteOTP(jobId);
+      console.log("verifyCompletionJob::",verifyCompletionJob)
+      // setJob(verifyCompletionJob || { ...job, status: "completed" });
       router.replace({
-        pathname: "/booking/completed",
+        pathname: "/booking/work-otp",
         params: {
           jobId: String(jobId),
         },
@@ -612,7 +614,7 @@ export default function InProgressScreen() {
 
         {/* Complete */}
         <TouchableOpacity
-          onPress={handleCompleteJob}
+          onPress={handleVerifyCompleteJob}
           disabled={completing}
           activeOpacity={0.85}
           style={{
@@ -653,7 +655,7 @@ export default function InProgressScreen() {
                     color: "#FFFFFF",
                   }}
                 >
-                  Mark as Completed
+                  Verify Completed Work
                 </Text>
 
                 <Icon

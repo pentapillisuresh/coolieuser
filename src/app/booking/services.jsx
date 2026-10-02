@@ -207,7 +207,6 @@ export default function ServicesScreen() {
               //     servicePrice: svc?.price.toString(),
               //   }
               // }) 
-              console.log("rrr::",svc?.id)
             }}
             activeOpacity={0.85}
             style={{

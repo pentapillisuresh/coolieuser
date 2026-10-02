@@ -25,10 +25,11 @@ export default function LoginScreen() {
     setLoading(true);
 
     const res= await sendOTP(phone,'user');
-    console.log("otp res:::",res)
+    console.log("otp res:::",res.otp)
+    const OTP=res.otp;
     setTimeout(() => {
       setLoading(false);
-      router.push({ pathname: "/otp", params: { phone: phone } });
+      router.push({ pathname: "/otp", params: { phone: phone,OTP } });
     }, 1200);
   };
 

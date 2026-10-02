@@ -18,6 +18,7 @@ import Icon2 from "react-native-vector-icons/MaterialIcons";
 import { getServiceById } from "../../../services/api/services";
 import { getMyAddresses, createAddress } from "../../../services/api/address"; // ✅ NEW
 import LocationPickerModal from "../../components/LocationPickerModal";
+import { checkAvailability } from "../../../services/api/booking";
 
 // ─── Static data ────────────────────────────────────────────────
 const TIMES = [
@@ -40,6 +41,36 @@ const getDateLabels = () => {
     }
   }
   return dates;
+};
+
+const convertToMySQLTime = (time) => {
+  if (!time) return "10:00:00";
+
+  // Already MySQL TIME format
+  if (/^\d{2}:\d{2}:\d{2}$/.test(time)) {
+    return time;
+  }
+
+  // Convert "10:00 AM" / "2:30 PM" → "10:00:00" / "14:30:00"
+  const match = time.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+
+  if (!match) {
+    throw new Error("Invalid scheduledTime format. Use HH:mm:ss or hh:mm AM/PM");
+  }
+
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2];
+  const period = match[3].toUpperCase();
+
+  if (period === "AM" && hours === 12) {
+    hours = 0;
+  }
+
+  if (period === "PM" && hours !== 12) {
+    hours += 12;
+  }
+
+  return `${String(hours).padStart(2, "0")}:${minutes}:00`;
 };
 
 const DATES_LABELS = getDateLabels();
@@ -174,7 +205,7 @@ export default function BookingDetailsScreen() {
     try {
       const res = await getMyAddresses({ page: 1, limit: 50 });
       const list = res.data.items || [];
-      console.log("address list ::",list)
+      console.log("address list ::", list)
       setAddresses(list);
 
       if (list.length === 0) {
@@ -313,10 +344,23 @@ export default function BookingDetailsScreen() {
       details: formData,
     };
 
-    router.push({
-      pathname: "/booking/summary",
-      params: { bookingPayload: JSON.stringify(payload) },
-    });
+    const checkPayload = {
+      serviceId,
+      address: finalAddress,
+      scheduledDate,
+      scheduledTime: convertToMySQLTime(scheduledTime) || "10:00:00"
+    }
+
+    const response = await checkAvailability(checkPayload);
+    if (response.data) {
+      console.log("same", response.data)
+      Alert.alert("Sorry,booking was booked at this date and time ")
+    } else {
+      router.push({
+        pathname: "/booking/summary",
+        params: { bookingPayload: JSON.stringify(payload) },
+      });
+    }
   };
 
   // ── Loading / not found ────────────────────────────────────
@@ -887,16 +931,83 @@ export default function BookingDetailsScreen() {
               Exact charges may vary based on work scope.
             </Text>
           </View>
+          
+            {/* OTP Display (when arrived)
+            {currentStatus === "arrived" && job.confirmationOtp && (
+              <View
+                style={{
+                  backgroundColor: "#FEF3C7",
+                  borderRadius: 14,
+                  padding: 14,
+                  marginBottom: 12,
+                  borderWidth: 1,
+                  borderColor: "#F59E0B",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#92400E",
+                    fontSize: 12,
+                    fontWeight: "800",
+                    marginBottom: 6,
+                  }}
+                >
+                  🔑 Confirmation OTP
+                </Text>
+                <Text
+                  style={{
+                    color: "#92400E",
+                    fontSize: 11,
+                    marginBottom: 4,
+                  }}
+                >
+                  Ask the customer for the OTP to start work
+                </Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    gap: 8,
+                    marginTop: 6,
+                  }}
+                >
+                  {job.confirmationOtp.split("").map((digit, i) => (
+                    <View
+                      key={i}
+                      style={{
+                        width: 36,
+                        height: 44,
+                        backgroundColor: C.white,
+                        borderRadius: 8,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderWidth: 1,
+                        borderColor: "#F59E0B",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 20,
+                          fontWeight: "900",
+                          color: "#92400E",
+                        }}
+                      >
+                        {digit}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )} */}
 
           {/* Continue */}
           <TouchableOpacity
             onPress={handleNext}
             disabled={savingAddress}
             activeOpacity={0.85}
-            
+
           >
-            <View 
-            style={{
+            <View
+              style={{
                 borderRadius: 50,
                 paddingVertical: 18,
                 flexDirection: "row",

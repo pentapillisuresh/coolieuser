@@ -80,17 +80,6 @@ export default function BookingsScreen() {
       setLoading(true);
       try {
         const statuses = statusMap[activeTab] || [];
-        // API expects a single status, but we can send multiple as comma-separated? We'll use the first.
-        // Alternatively, we can loop through statuses and combine, but for simplicity we use the first.
-        // Better: we can filter client-side after fetching all statuses, but that defeats pagination.
-        // We'll pick the first status for the API, but we can modify backend to accept array.
-        // For now, we'll send first status if single else we fetch all and filter.
-        // Let's fetch all statuses and filter locally (not ideal but works for demo).
-        // We'll fetch all bookings with statuses.
-        // We'll create a separate fetch for each tab.
-        // Simpler: fetch all bookings and filter by status in JS.
-        // But we need pagination per tab, so we'll fetch with status filter.
-        // We'll assume API accepts a status string (e.g., 'pending', 'accepted', etc.)
         const status = statuses.length === 1 ? statuses[0] : undefined;
         const response = await getMyBookings({
           page: reset ? 1 : page,
@@ -98,6 +87,7 @@ export default function BookingsScreen() {
           status,
         });
         const newItems = response.data.items || [];
+
         const total = response.data.totalItems || 0;
         setTotalItems(total);
         if (reset) {

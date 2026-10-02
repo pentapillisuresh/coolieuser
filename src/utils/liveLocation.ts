@@ -1,32 +1,34 @@
+// src/utils/liveLocation.js
 import * as Location from "expo-location";
 
-export async function getCurrentLocation() {
-  // Request permission
-  const { status } = await Location.requestForegroundPermissionsAsync();
+export const getCurrentLocation = async () => {
+  try {
+    const { status } = await Location.getForegroundPermissionsAsync();
 
-  if (status !== "granted") {
-    console.log("Location permission denied");
-    return;
-  }
+    if (status !== "granted") {
+      const perm = await Location.requestForegroundPermissionsAsync();
+      if (perm.status !== "granted") {
+        console.warn("Location permission denied");
+        return null;
+      }
+    }
 
-  // Get current coordinates
-  const location = await Location.getCurrentPositionAsync({});
+    const servicesEnabled = await Location.hasServicesEnabledAsync();
+    if (!servicesEnabled) {
+      console.warn("Location services disabled");
+      return null;
+    }
 
-  // Reverse geocode
-  const address = await Location.reverseGeocodeAsync({
-    latitude: location.coords.latitude,
-    longitude: location.coords.longitude,
-  });
-
-  if (address.length > 0) {
-    const place = address[0];
-
-    console.log("City:", place.city);
-    console.log("Country:", place.country);
+    const loc = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Balanced,
+    });
 
     return {
-      city: place.city,
-      country: place.country,
+      latitude: loc.coords.latitude,
+      longitude: loc.coords.longitude,
     };
+  } catch (error:any) {
+    console.warn("getCurrentLocation error:", error.message);
+    return null;   // ✅ never throw
   }
-}
+};

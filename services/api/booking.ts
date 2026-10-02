@@ -60,6 +60,7 @@ export const createBooking = (data: {
   address: string;
   latitude?: number;
   longitude?: number;
+  addressId?: number;
   scheduledDate: string; // YYYY-MM-DD
   scheduledTime: string; // HH:MM
   estimatedArrival?: string;
@@ -68,6 +69,16 @@ export const createBooking = (data: {
   groupId?: string;
 }): Promise<BookingResponse> =>
   client.post('/bookings', data);
+
+export const checkAvailability = (data: {
+  serviceId: number;
+  address: string;
+  scheduledDate: string; // YYYY-MM-DD
+  scheduledTime: string; // HH:MM
+}): Promise<BookingResponse> =>
+  client.get('/bookings/checkAvailability', {
+    params: data,
+  });
 
 /**
  * Get all bookings for the authenticated user (with pagination and status filter)

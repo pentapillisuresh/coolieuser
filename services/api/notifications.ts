@@ -11,3 +11,4 @@ export const markAllNotificationsRead = () =>
 
 export const deleteNotification = (id: number) =>
   client.delete(`/notifications/${id}`);
+

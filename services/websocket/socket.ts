@@ -1,260 +1,184 @@
-import Constants from 'expo-constants';
-import { io, Socket } from 'socket.io-client';
-import { getToken } from '../../src/utils/storage';
+// src/services/websocket/socket.ts
+import Constants from "expo-constants";
+import { io, Socket } from "socket.io-client";
+import { getToken } from "../../src/utils/storage";
 
 const socketUrl =
-  Constants.expoConfig?.extra?.socketUrl ||
-  'ws://192.168.0.12:3000';
+  Constants.expoConfig?.extra?.socketUrl || "ws://api.coolieglobal.com";
 
-console.log('🔌 Socket URL:', socketUrl);
+console.log("🔌 Socket URL:", socketUrl);
 
 export type SocketEventMap = {
-  // Client → Server
-  'join-booking': {
-    bookingId: number;
-  };
+  "join-booking": { bookingId: number };
+  "leave-booking": { bookingId: number };
+  "update-location": { bookingId: number; latitude: number; longitude: number };
+  "update-user-location": { bookingId: number; latitude: number; longitude: number };
+  "update-worker-location": { bookingId: number; latitude: number; longitude: number; speed?: number; heading?: number };
+  "update-train": { bookingId: number; trainStatus?: string; coachNumber?: string; estimatedArrival?: string };
+  "job-status-change": { bookingId: number; status: string; otp?: string };
+  "chat-message": { bookingId: number; message: string; senderId: number; senderType: string; timestamp?: string };
 
-  'leave-booking': {
-    bookingId: number;
-  };
-
-  'update-location': {
-    bookingId: number;
-    latitude: number;
-    longitude: number;
-  };
-
-  'update-train': {
-    bookingId: number;
-    trainStatus?: string;
-    coachNumber?: string;
-    estimatedArrival?: string;
-  };
-
-  'job-status-change': {
-    bookingId: number;
-    status: string;
-  };
-
-  // Server → Client
-  'joined-booking': {
-    bookingId: number;
-    success: boolean;
-  };
-
-  'join-error': {
-    bookingId: number;
-    error: string;
-  };
-
-  'worker-location': {
-    bookingId: number;
-    workerId: number;
-    latitude: number;
-    longitude: number;
-    timestamp: string;
-  };
-
-  'train-update': {
-    bookingId: number;
-    trainStatus?: string;
-    coachNumber?: string;
-    estimatedArrival?: string;
-  };
-
-  'job-status': {
-    bookingId: number;
-    status: string;
-    updatedAt: string;
-  };
-
-  'new-job-assigned': {
-    bookingId: number;
-    jobData: any;
-    message: string;
-  };
-
-  'job-status-update': {
-    bookingId: number;
-    status: string;
-    message: string;
-  };
-
-  'train-tracking': any;
+  "joined-booking": { bookingId: number; success: boolean };
+  "join-error": { bookingId: number; error: string; message?: string };
+  "worker-location": { bookingId: number; workerId: number; latitude: number; longitude: number; timestamp: string };
+  "user-location": { bookingId: number; latitude: number; longitude: number; timestamp: string };
+  "train-update": { bookingId: number; trainStatus?: string; coachNumber?: string; estimatedArrival?: string };
+  "job-status": { bookingId: number; status: string; updatedAt: string };
+  "new-job-assigned": { bookingId: number; jobData: any; message: string };
+  "job-status-update": { bookingId: number; status: string; message: string };
+  "train-tracking": any;
 };
 
 class SocketService {
   private socket: Socket | null = null;
+  private listeners: Map<string, Set<(data: any) => void>> = new Map();
 
-  private listeners: Map<
-    keyof SocketEventMap,
-    Set<(data: any) => void>
-  > = new Map();
+  // ✅ Connection promise — resolves when socket is actually connected
+  private connectPromise: Promise<void> | null = null;
+
+  // ✅ Track joined bookings so we can auto-rejoin on reconnect
+  private joinedBookings: Set<number> = new Set();
 
   /**
-   * Connect to Socket.IO server
+   * Connect and WAIT until the socket is actually connected.
+   * Safe to call multiple times.
    */
   async connect(): Promise<void> {
     // Already connected
     if (this.socket?.connected) {
-      console.log('🔌 Socket already connected:', this.socket.id);
       return;
     }
 
-    // If a connection attempt is already in progress,
-    // don't create another socket.
-    if (this.socket) {
-      console.log('🔌 Socket connection already exists');
-      return;
+    // A connection attempt is already in progress
+    if (this.connectPromise) {
+      return this.connectPromise;
     }
 
     const token = await getToken();
-
     if (!token) {
-      console.warn(
-        '⚠️ No authentication token available. Socket connection skipped.'
-      );
+      console.warn("⚠️ No auth token. Socket connection skipped.");
       return;
     }
 
-    console.log('🔌 Connecting to socket:', socketUrl);
+    this.connectPromise = new Promise<void>((resolve, reject) => {
+      console.log("🔌 Connecting to socket:", socketUrl);
 
-    this.socket = io(socketUrl, {
-      auth: {
-        token,
-      },
-    
-      transports: ['polling', 'websocket'],
-    
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-    
-      timeout: 10000,
+      const socket = io(socketUrl, {
+        auth: { token },
+        transports: ["websocket", "polling"],
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        timeout: 10000,
+      });
+
+      this.socket = socket;
+
+      const onConnect = () => {
+        console.log("✅ SOCKET CONNECTED:", socket.id);
+        this.registerSocketEvents();
+
+        // ✅ Auto-rejoin all tracked bookings on (re)connect
+        this.joinedBookings.forEach((bookingId) => {
+          console.log(`🔁 Auto-rejoining booking ${bookingId}`);
+          socket.emit("join-booking", { bookingId });
+        });
+
+        resolve();
+      };
+
+      const onConnectError = (err: any) => {
+        console.error("❌ SOCKET CONNECT ERROR:", err?.message);
+        // Reject only on first-ever attempt
+        if (!socket.connected) {
+          this.connectPromise = null;
+          reject(err);
+        }
+      };
+
+      socket.once("connect", onConnect);
+      socket.once("connect_error", onConnectError);
     });
-    
-    this.registerSocketEvents();
+
+    return this.connectPromise;
   }
 
-  /**
-   * Register internal Socket.IO events
-   */
   private registerSocketEvents(): void {
-    if (!this.socket) {
-      return;
-    }
+    if (!this.socket) return;
 
-    this.socket.on('connect', () => {
-      console.log('=================================');
-      console.log('🔌 SOCKET CONNECTED');
-      console.log('🆔 Socket ID:', this.socket?.id);
-      console.log('🌐 Socket URL:', socketUrl);
-      console.log('=================================');
+    this.socket.on("disconnect", (reason) => {
+      console.log("🔌 Socket disconnected. Reason:", reason);
     });
 
-    this.socket.on('disconnect', (reason) => {
-      console.log('🔌 Socket disconnected');
-      console.log('Reason:', reason);
+    this.socket.io.on("reconnect_attempt", (attempt) => {
+      console.log(`🔄 Reconnect attempt #${attempt}`);
     });
 
-    this.socket.on('connect_error', (error: any) => {
-      console.error('=================================');
-      console.error('❌ SOCKET CONNECTION ERROR');
-      console.error('Message:', error?.message);
-      console.error('Description:', error?.description);
-      console.error('Context:', error?.context);
-      console.error('=================================');
+    this.socket.io.on("reconnect", (attempt) => {
+      console.log(`✅ Reconnected after ${attempt} attempt(s)`);
     });
 
-    this.socket.io.on('reconnect_attempt', (attempt) => {
-      console.log(`🔄 Socket reconnect attempt #${attempt}`);
-    });
-
-    this.socket.io.on('reconnect', (attempt) => {
-      console.log(`✅ Socket reconnected after ${attempt} attempt(s)`);
-    });
-
-    this.socket.io.on('reconnect_error', (error) => {
-      console.error('❌ Socket reconnect error:', error);
-    });
-
-    this.socket.io.on('reconnect_failed', () => {
-      console.error('❌ Socket reconnection failed');
+    this.socket.io.on("reconnect_failed", () => {
+      console.error("❌ Reconnection failed");
     });
   }
 
-  /**
-   * Disconnect socket
-   */
   disconnect(): void {
-    if (!this.socket) {
-      return;
-    }
-
-    console.log('🔌 Disconnecting socket...');
-
+    if (!this.socket) return;
     this.socket.removeAllListeners();
     this.socket.disconnect();
     this.socket = null;
+    this.connectPromise = null;
+    this.joinedBookings.clear();
   }
 
   /**
-   * Join booking room
+   * Join booking room — waits for connection if not ready.
    */
-  joinBooking(bookingId: number): void {
+  async joinBooking(bookingId: number): Promise<void> {
+    // Track for auto-rejoin
+    this.joinedBookings.add(bookingId);
+
+    try {
+      await this.connect();
+    } catch (err) {
+      console.warn("⚠️ Cannot join booking. Socket not connected.");
+      return;
+    }
+
     if (!this.socket?.connected) {
-      console.warn(
-        '⚠️ Cannot join booking. Socket is not connected.'
-      );
+      console.warn("⚠️ Cannot join booking. Socket not connected.");
       return;
     }
 
     console.log(`📡 Joining booking ${bookingId}`);
-
-    this.socket.emit('join-booking', {
-      bookingId,
-    });
+    this.socket.emit("join-booking", { bookingId });
   }
 
   /**
    * Leave booking room
    */
-  leaveBooking(bookingId: number): void {
-    if (!this.socket?.connected) {
-      console.warn(
-        '⚠️ Cannot leave booking. Socket is not connected.'
-      );
-      return;
-    }
+  async leaveBooking(bookingId: number): Promise<void> {
+    this.joinedBookings.delete(bookingId);
+
+    if (!this.socket?.connected) return;
 
     console.log(`📡 Leaving booking ${bookingId}`);
-
-    this.socket.emit('leave-booking', {
-      bookingId,
-    });
+    this.socket.emit("leave-booking", { bookingId });
   }
 
   /**
-   * Send user location
-   *
-   * IMPORTANT:
-   * This uses "update-location".
-   * If your backend expects "update-user-location",
-   * change the event name here.
+   * Send user location (matches backend: 'update-user-location')
    */
-  updateUserLocation(
+  async updateUserLocation(
     bookingId: number,
     latitude: number,
     longitude: number
-  ): void {
-    if (!this.socket?.connected) {
-      console.warn(
-        '⚠️ Cannot update location. Socket is not connected.'
-      );
-      return;
-    }
+  ): Promise<void> {
+    await this.connect();
+    if (!this.socket?.connected) return;
 
-    this.socket.emit('update-location', {
+    this.socket.emit("update-user-location", {
       bookingId,
       latitude,
       longitude,
@@ -262,46 +186,72 @@ class SocketService {
   }
 
   /**
-   * Send train tracking update
+   * Send worker location
    */
-  updateTrain(
+  async updateWorkerLocation(
     bookingId: number,
-    data: {
-      trainStatus?: string;
-      coachNumber?: string;
-      estimatedArrival?: string;
-    }
-  ): void {
-    if (!this.socket?.connected) {
-      console.warn(
-        '⚠️ Cannot update train. Socket is not connected.'
-      );
-      return;
-    }
+    latitude: number,
+    longitude: number,
+    speed?: number,
+    heading?: number
+  ): Promise<void> {
+    await this.connect();
+    if (!this.socket?.connected) return;
 
-    this.socket.emit('update-train', {
+    this.socket.emit("update-worker-location", {
       bookingId,
-      ...data,
+      latitude,
+      longitude,
+      speed,
+      heading,
     });
   }
 
   /**
-   * Send job status change
+   * Job status change
    */
-  updateJobStatus(
+  async updateJobStatus(
     bookingId: number,
-    status: string
-  ): void {
-    if (!this.socket?.connected) {
-      console.warn(
-        '⚠️ Cannot update job status. Socket is not connected.'
-      );
-      return;
-    }
+    status: string,
+    otp?: string
+  ): Promise<void> {
+    await this.connect();
+    if (!this.socket?.connected) return;
 
-    this.socket.emit('job-status-change', {
+    this.socket.emit("job-status-change", { bookingId, status, otp });
+  }
+
+  /**
+   * Train update
+   */
+  async updateTrain(
+    bookingId: number,
+    data: { trainStatus?: string; coachNumber?: string; estimatedArrival?: string }
+  ): Promise<void> {
+    await this.connect();
+    if (!this.socket?.connected) return;
+
+    this.socket.emit("update-train", { bookingId, ...data });
+  }
+
+  /**
+   * Send chat message
+   */
+  async sendChatMessage(
+    bookingId: number,
+    message: string,
+    senderId: number,
+    senderType: "user" | "worker"
+  ): Promise<void> {
+    await this.connect();
+    if (!this.socket?.connected) return;
+
+    this.socket.emit("chat-message", {
       bookingId,
-      status,
+      message,
+      senderId,
+      senderType,
+      timestamp: new Date().toISOString(),
     });
   }
 
@@ -312,69 +262,43 @@ class SocketService {
     event: T,
     callback: (data: SocketEventMap[T]) => void
   ): () => void {
-    if (!this.listeners.has(event)) {
-      this.listeners.set(event, new Set());
+    if (!this.listeners.has(event as string)) {
+      this.listeners.set(event as string, new Set());
     }
 
-    const callbacks = this.listeners.get(event)!;
-
+    const callbacks = this.listeners.get(event as string)!;
     callbacks.add(callback as any);
 
-    if (this.socket) {
-      this.socket.on(event as string, callback as any);
-    }
+    // Register on the socket
+    this.socket?.on(event as string, callback as any);
 
     // Return unsubscribe function
     return () => {
       this.socket?.off(event as string, callback as any);
-
       callbacks.delete(callback as any);
-
       if (callbacks.size === 0) {
-        this.listeners.delete(event);
+        this.listeners.delete(event as string);
       }
     };
   }
 
-  /**
-   * Register one-time listener
-   */
-  once<T extends keyof SocketEventMap>(
-    event: T,
-    callback: (data: SocketEventMap[T]) => void
-  ): void {
-    this.socket?.once(event as string, callback as any);
-  }
-
-  /**
-   * Remove listener
-   */
   off<T extends keyof SocketEventMap>(
     event: T,
     callback?: (data: SocketEventMap[T]) => void
   ): void {
     if (callback) {
       this.socket?.off(event as string, callback as any);
-
-      this.listeners.get(event)?.delete(callback as any);
-
+      this.listeners.get(event as string)?.delete(callback as any);
       return;
     }
-
     this.socket?.removeAllListeners(event as string);
-    this.listeners.delete(event);
+    this.listeners.delete(event as string);
   }
 
-  /**
-   * Check connection
-   */
   isConnected(): boolean {
     return this.socket?.connected ?? false;
   }
 
-  /**
-   * Get socket ID
-   */
   getSocketId(): string | undefined {
     return this.socket?.id;
   }

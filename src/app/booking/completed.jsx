@@ -1,37 +1,174 @@
-import { View, Text, TouchableOpacity, Alert, StatusBar } from "react-native";
+import React, { useState, useEffect } from "react";
+import {View,Text,TouchableOpacity,Alert,StatusBar,ActivityIndicator,ScrollView} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Icon from "react-native-vector-icons/Feather";
 import Icon2 from "react-native-vector-icons/MaterialIcons";
 import Icon3 from "react-native-vector-icons/FontAwesome5";
-import { WORKERS } from "../../data/dummy";
+import {getJobById} from "../../../services/api/job";
 
 export default function CompletedScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams();
-  const worker = WORKERS[0];
 
-  const handleConfirm = () => {
-    router.push({ pathname: "/booking/payment", params });
+  const [job, setJob] = useState(null);
+  const [worker, setWorker] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const jobId = params?.jobId;
+
+  // ─── Load job on mount ────────────────────────────────────
+  useEffect(() => {
+    if (jobId) {
+      loadJob();
+    } else {
+      setLoading(false);
+    }
+  }, [jobId]);
+
+  const loadJob = async () => {
+    try {
+      setLoading(true);
+      const response = await getJobById(jobId);
+      const jobData = response?.data || response;
+
+      if (!jobData) {
+        Alert.alert("Error", "Job not found.");
+        router.back();
+        return;
+      }
+
+      setJob(jobData);
+
+      // ✅ Extract worker from job.Worker (with User nested inside)
+      const workerData = jobData.Worker || {};
+      const workerUser = workerData.User || {};
+      setWorker({
+        id: workerData.id,
+        name: workerUser.name || "Worker",
+        mobile: workerUser.mobile || "",
+        profession: workerData.profession || "Service Professional",
+        rating: workerData.rating || 0,
+        experience: workerData.experience || 0,
+        isVerified: workerData.isVerified || false,
+      });
+
+      // Redirect if job isn't actually completed
+      const status = String(jobData.status || "").toLowerCase();
+      if (status !== "completed") {
+        console.warn("Job not completed yet. Status:", status);
+        // Uncomment if you want to redirect
+        // router.replace({
+        //   pathname: "/job/details",
+        //   params: { id: jobId },
+        // });
+      }
+    } catch (error) {
+      console.error("Failed to load job:", error);
+      Alert.alert("Error", "Unable to load job details. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // ─── Confirm completion → go to payment ──────────────────
+  const handleConfirm = () => {
+    router.push({
+      pathname: "/(tabs)/home",
+    });
+  };
+
+  // ─── Raise an issue ───────────────────────────────────────
   const handleRaiseIssue = () => {
     Alert.alert(
       "Raise an Issue",
       "Our support team will contact you within 2 hours.",
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Submit", onPress: () => router.push("/support") },
-      ],
+        {
+          text: "Submit",
+          onPress: () =>
+            router.push({
+              pathname: "/support",
+              params: { jobId, bookingId: job?.bookingId },
+            }),
+        },
+      ]
     );
   };
+
+  // ─── Loading state ────────────────────────────────────────
+  if (loading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "#F3F8EF",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <ActivityIndicator size="large" color="#17381B" />
+        <Text style={{ marginTop: 12, color: "#6B7280" }}>
+          Loading job details...
+        </Text>
+      </View>
+    );
+  }
+
+  // ─── Not found state ─────────────────────────────────────
+  if (!job) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "#F3F8EF",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: 20,
+        }}
+      >
+        <Text style={{ fontSize: 16, color: "#6B7280" }}>
+          Job not found
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{ marginTop: 12 }}
+        >
+          <Text style={{ color: "#17381B", fontWeight: "600" }}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // ─── Extract display data ─────────────────────────────────
+  const booking = job.Booking || {};
+  const service = booking.Service || {};
+  const category = service.Category || {};
+
+  const serviceName =
+    params.serviceName ||
+    service.name ||
+    booking.details?.serviceName ||
+    "Service";
+
+  const workerName = worker?.name || "Worker";
+  const workerInitial = workerName.charAt(0).toUpperCase();
+
+  const totalAmount = parseFloat(booking.totalAmount || 0);
+  const completedAt = job.completedAt
+    ? new Date(job.completedAt).toLocaleString("en-IN", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      })
+    : "Just now";
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F3F8EF" }}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      
-      {/* Header - No Gradient */}
+
+      {/* Header */}
       <View
         style={{
           backgroundColor: "#17381B",
@@ -52,11 +189,15 @@ export default function CompletedScreen() {
           Work Completed!
         </Text>
         <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.75)" }}>
-          {params.serviceName || "Fan Installation"}
+          {serviceName}
         </Text>
       </View>
 
-      <View style={{ flex: 1, padding: 20, gap: 16 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 20, gap: 16 }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Completion banner */}
         <View
           style={{
@@ -102,8 +243,17 @@ export default function CompletedScreen() {
               lineHeight: 22,
             }}
           >
-            {worker.name} has marked the job as complete. Please confirm if
+            {workerName} has marked the job as complete. Please confirm if
             you're satisfied.
+          </Text>
+          <Text
+            style={{
+              fontSize: 12,
+              color: "#15803d",
+              marginTop: 6,
+            }}
+          >
+            {completedAt}
           </Text>
         </View>
 
@@ -134,36 +284,136 @@ export default function CompletedScreen() {
             }}
           >
             <Text style={{ fontSize: 28, color: "#FFFFFF" }}>
-              {worker.name.charAt(0)}
+              {workerInitial}
             </Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text
-              style={{ fontSize: 16, fontWeight: "800", color: "#1F2937" }}
-            >
-              {worker.name}
+            <Text style={{ fontSize: 16, fontWeight: "800", color: "#1F2937" }}>
+              {workerName}
             </Text>
             <Text style={{ fontSize: 13, color: "#6B7280", marginTop: 2 }}>
-              {params.serviceName || "Fan Installation"}
+              {serviceName}
             </Text>
-            <Text
+            <View
               style={{
-                fontSize: 12,
-                color: "#16A34A",
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 4,
                 marginTop: 3,
-                fontWeight: "600",
               }}
             >
-              ✅ Job Completed
+              <Icon name="check-circle" size={12} color="#16A34A" />
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: "#16A34A",
+                  fontWeight: "600",
+                }}
+              >
+                Job Completed
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Booking summary */}
+        <View
+          style={{
+            backgroundColor: "#FFFFFF",
+            borderRadius: 18,
+            padding: 16,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.05,
+            shadowRadius: 8,
+            elevation: 3,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 14,
+              fontWeight: "800",
+              color: "#1F2937",
+              marginBottom: 12,
+            }}
+          >
+            Service Summary
+          </Text>
+
+          {[
+            {
+              label: "Category",
+              value: category.name || "Service",
+            },
+            {
+              label: "Service",
+              value: serviceName,
+            },
+            {
+              label: "Date",
+              value: booking.scheduledDate || "—",
+            },
+            {
+              label: "Time",
+              value: booking.scheduledTime?.slice(0, 5) || "—",
+            },
+            {
+              label: "Address",
+              value: booking.address || "—",
+            },
+          ].map((row, i) => (
+            <View
+              key={i}
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                paddingVertical: 8,
+                borderBottomWidth: i < 4 ? 1 : 0,
+                borderBottomColor: "#F3F8EF",
+              }}
+            >
+              <Text style={{ fontSize: 13, color: "#6B7280", flex: 1 }}>
+                {row.label}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: "700",
+                  color: "#1F2937",
+                  flex: 2,
+                  textAlign: "right",
+                }}
+                numberOfLines={2}
+              >
+                {row.value}
+              </Text>
+            </View>
+          ))}
+
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              paddingTop: 12,
+              marginTop: 4,
+              borderTopWidth: 2,
+              borderTopColor: "#17381B",
+            }}
+          >
+            <Text style={{ fontSize: 15, fontWeight: "900", color: "#1F2937" }}>
+              Total Amount
+            </Text>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: "#17381B" }}>
+              ₹{totalAmount.toLocaleString("en-IN")}
             </Text>
           </View>
         </View>
 
-        {/* Action info */}
+        {/* Info */}
         <View
-          style={{ 
-            backgroundColor: "#E8F5E9", 
-            borderRadius: 16, 
+          style={{
+            backgroundColor: "#E8F5E9",
+            borderRadius: 16,
             padding: 16,
             borderWidth: 1,
             borderColor: "#17381B",
@@ -171,7 +421,14 @@ export default function CompletedScreen() {
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Icon name="info" size={16} color="#17381B" />
-            <Text style={{ fontSize: 14, color: "#17381B", lineHeight: 22, flex: 1 }}>
+            <Text
+              style={{
+                fontSize: 14,
+                color: "#17381B",
+                lineHeight: 22,
+                flex: 1,
+              }}
+            >
               Please verify that all work has been completed to your
               satisfaction before confirming.
             </Text>
@@ -179,7 +436,7 @@ export default function CompletedScreen() {
         </View>
 
         {/* Buttons */}
-        <View style={{ gap: 12, marginTop: "auto" }}>
+        <View style={{ gap: 12, marginTop: 8 }}>
           <TouchableOpacity onPress={handleConfirm} activeOpacity={0.85}>
             <View
               style={{
@@ -228,7 +485,9 @@ export default function CompletedScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
+
+        <View style={{ height: 20 }} />
+      </ScrollView>
     </View>
   );
 }

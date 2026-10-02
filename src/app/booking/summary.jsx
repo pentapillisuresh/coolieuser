@@ -92,7 +92,6 @@ async function geocodeAddress(address) {
     bookingType,
     details = {},
   } = payload;
-console.log("rrr::",payload)
   // ─── State ──────────────────────────────────────────────────────
   const [loading, setLoading] = useState(false);
   const [couponCode, setCouponCode] = useState("");
@@ -211,6 +210,7 @@ console.log("rrr::",payload)
     setCouponMessage(null);
     setCouponError(null);
   };
+  
   const convertToMySQLTime = (time) => {
     if (!time) return "10:00:00";
   

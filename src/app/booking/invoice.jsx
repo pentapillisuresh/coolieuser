@@ -62,7 +62,7 @@ export default function InvoiceScreen() {
 
       const invoiceText = `
 ========================================
-              KOOLI INVOICE
+              COOLI INVOICE
 ========================================
 Invoice #: ${id || "N/A"}
 Date: ${new Date().toLocaleDateString()}
@@ -89,8 +89,8 @@ Discount: -₹${booking.discountAmount}
 Total Paid: ₹${booking.totalAmount}
 ========================================
 
-Thank you for choosing KOOLI!
-For queries, contact: support@kooli.app
+Thank you for choosing COOLI!
+For queries, contact: support@COOLI.app
       `;
 
       const result = await Share.share({
@@ -241,7 +241,7 @@ For queries, contact: support@kooli.app
                   letterSpacing: 3,
                 }}
               >
-                KOOLI
+                COOLI
               </Text>
               <Text
                 style={{
@@ -481,8 +481,8 @@ For queries, contact: support@kooli.app
                 lineHeight: 18,
               }}
             >
-              Thank you for using KOOLI! 🙏{"\n"}
-              For queries: support@kooli.app
+              Thank you for using COOLI! 🙏{"\n"}
+              For queries: support@COOLI.app
             </Text>
           </View>
         </View>

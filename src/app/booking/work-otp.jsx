@@ -12,40 +12,66 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Icon from "react-native-vector-icons/Feather";
 import Icon2 from "react-native-vector-icons/MaterialIcons";
+import { completeJob } from "../../../services/api/job";
 
 export default function WorkOTPScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams();
-  const [otp, setOtp] = useState(["", "", "", ""]);
+  const [otp, setOtp] = useState(["", "", "", "","",""]);
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState(false);
   const inputRefs = useRef([]);
-
+const {jobId}=params;
   const handleChange = (text, index) => {
     const newOtp = [...otp];
     newOtp[index] = text.slice(-1);
     setOtp(newOtp);
     setError(false);
-    if (text && index < 3) inputRefs.current[index + 1]?.focus();
+    if (text && index < 5) inputRefs.current[index + 1]?.focus();
   };
 
-  const handleVerify = () => {
-    const code = otp.join("");
-    if (code === "4829") {
-      setVerified(true);
-      setTimeout(
-        () => router.push({ pathname: "/booking/in-progress", params }),
-        1200,
+  const handleCompleteJob = async () => {
+    if (!jobId) {
+      return;
+    }
+    try {
+      const completionOtp = otp.join("");
+  
+      const updatedJob = await completeJob(jobId, completionOtp);
+    
+      router.replace({
+        pathname: "/booking/completed",
+        params: {
+          jobId: String(jobId),
+        },
+      });
+    } catch (error) {
+      console.error("Failed to complete job:", error);
+  
+      Alert.alert(
+        "Unable to complete",
+        "The job could not be marked as completed. Please try again."
       );
-    } else {
-      setError(true);
-      setOtp(["", "", "", ""]);
-      inputRefs.current[0]?.focus();
     }
   };
+  
+  // const handleVerify = () => {
+  //   const code = otp.join("");
+  //   if (code === "482900") {
+  //     setVerified(true);
+  //     setTimeout(
+  //       () => router.push({ pathname: "/booking/", params }),
+  //       1200,
+  //     );
+  //   } else {
+  //     setError(true);
+  //     setOtp(["", "", "", "","",""]);
+  //     inputRefs.current[0]?.focus();
+  //   }
+  // };
 
-  const isComplete = otp.join("").length === 4;
+  const isComplete = otp.join("").length === 6;
 
   if (verified) {
     return (
@@ -141,7 +167,7 @@ export default function WorkOTPScreen() {
               lineHeight: 22,
             }}
           >
-            Worker enters the 4-digit OTP you shared to start work
+            Worker enters the 6-digit OTP you shared to start work
           </Text>
         </View>
 
@@ -185,7 +211,7 @@ export default function WorkOTPScreen() {
               marginBottom: 32,
             }}
           >
-            Enter the 4-digit OTP you showed the worker
+            Enter the 6-digit OTP you showed the worker
           </Text>
 
           <View
@@ -200,8 +226,8 @@ export default function WorkOTPScreen() {
               <View
                 key={index}
                 style={{
-                  width: 70,
-                  height: 70,
+                  width: 50,
+                  height: 50,
                   borderRadius: 18,
                   borderWidth: 2.5,
                   borderColor: error
@@ -217,7 +243,7 @@ export default function WorkOTPScreen() {
                 <TextInput
                   ref={(r) => (inputRefs.current[index] = r)}
                   style={{
-                    fontSize: 28,
+                    fontSize: 18,
                     fontWeight: "900",
                     color: "#17381B",
                     textAlign: "center",
@@ -254,7 +280,7 @@ export default function WorkOTPScreen() {
           </View>
 
           <TouchableOpacity
-            onPress={handleVerify}
+           onPress={handleCompleteJob}
             activeOpacity={0.85}
             disabled={!isComplete}
           >

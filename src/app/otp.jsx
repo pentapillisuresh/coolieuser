@@ -12,7 +12,7 @@ const { height } = Dimensions.get("window");
 export default function OTPScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { phone } = useLocalSearchParams();
+  const { phone,OTP } = useLocalSearchParams();
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(30);
@@ -24,26 +24,34 @@ export default function OTPScreen() {
     return () => clearInterval(t);
   }, []);
 
-  // Auto-fill simulation
-  // useEffect(() => {
-  //   const timeout = setTimeout(() => {
-  //     setAutoFilling(true);
-  //     const demoOtp = ["1", "2", "3", "4", "5", "6"];
-  //     demoOtp.forEach((d, i) => {
-  //       setTimeout(() => {
-  //         setOtp((prev) => {
-  //           const n = [...prev];
-  //           n[i] = d;
-  //           return n;
-  //         });
-  //       }, i * 120);
-  //     });
-  //     setTimeout(() => setAutoFilling(false), 800);
-  //   }, 2000);
-  //   return () => clearTimeout(timeout);
-  // }, []);
-
-  const handleChange = (text, index) => {
+  // Auto-fill simulation  
+  useEffect(() => {
+    if (!OTP) return;
+  
+    const otpString = String(OTP).trim();
+  
+    setAutoFilling(true);
+  
+    const timers = otpString.split("").map((digit, index) => {
+      return setTimeout(() => {
+        setOtp((prev) => {
+          const next = [...prev];
+          next[index] = digit;
+          return next;
+        });
+      }, index * 120);
+    });
+  
+    const doneTimer = setTimeout(() => {
+      setAutoFilling(false);
+    }, otpString.length * 120 + 200);
+  
+    return () => {
+      timers.forEach(clearTimeout);
+      clearTimeout(doneTimer);
+    };
+  }, [OTP]);
+    const handleChange = (text, index) => {
     const newOtp = [...otp];
     newOtp[index] = text.slice(-1);
     setOtp(newOtp);
