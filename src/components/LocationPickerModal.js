@@ -29,12 +29,14 @@ const LocationPickerModal = ({ visible, onClose, onSelect, initialAddress }) => 
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') return;
       const loc = await Location.getCurrentPositionAsync({});
+
       const newRegion = {
-        latitude: loc.coords.latitude,
+        latitude: loc.coords.latitude, 
         longitude: loc.coords.longitude,
         latitudeDelta: 0.005,
         longitudeDelta: 0.005,
       };
+
       setRegion(newRegion);
       mapRef.current?.animateToRegion(newRegion, 500);
       fetchAddress(loc.coords.latitude, loc.coords.longitude);

@@ -36,6 +36,7 @@ export default function SelectLocationScreen() {
         latitudeDelta: 0.005,
         longitudeDelta: 0.005,
       };
+      console.log("rrr::",newRegion)
       setRegion(newRegion);
       mapRef.current?.animateToRegion(newRegion, 500);
       fetchAddress(loc.coords.latitude, loc.coords.longitude);

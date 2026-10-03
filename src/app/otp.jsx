@@ -4,7 +4,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeft, RefreshCw } from "lucide-react-native";
 import { verifyOTP } from '../../services/api/auth'
-import { storeToken } from "../utils/storage";
+import { getToken, storeToken } from "../utils/storage";
 import * as SecureStore from 'expo-secure-store';
 
 const { height } = Dimensions.get("window");
@@ -78,9 +78,14 @@ export default function OTPScreen() {
       const res = await verifyOTP(phone, otpCode, "user");
       console.log("otp verify res::", res);
       const token = res.token
-      storeToken(token)
+      await storeToken(token)
+
+      SecureStore.setItemAsync("userData",JSON.stringify(res?.user));
       SecureStore.setItemAsync("userData",JSON.stringify(res?.user));
       SecureStore.setItemAsync("isLogin","true");
+      const rrr=await getToken()
+      console.log("token::", rrr);
+
       router.replace("/profile-setup");
     } catch (err) {
       console.error("OTP verification failed:", err);

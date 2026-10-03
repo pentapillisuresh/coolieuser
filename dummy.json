@@ -705,7 +705,6 @@ category: [
     "updatedAt": "2026-09-14T10:45:47.000Z",
     "userId": 2
 },
-
 "Worker": {
     "User": {
         "id": 3,
@@ -748,4 +747,178 @@ category: [
 "workerId": 1,
 "workerLatitude": 17.717277185986486,
 "workerLongitude": 83.29747265204787
+}
+
+{
+"id": 2,
+"userId": 2,
+"serviceId": 21,
+"details": {
+    "bookingType": "schedule",
+    "serviceName": "Electrician",
+    "serviceType": "Socket Replacement",
+    "categoryName": "Home Repairs & Handyman",
+    "issueDescription": "Socket not working so please replace with new one"
+},
+"address": "31-17-7, Bangaramma Metta, Daba Gardens, Allipuram, Visakhapatnam, Andhra Pradesh 530004, India",
+"addressId": 2,
+"cancellationReason": null,
+"latitude": 17.717253871690367,
+"longitude": 83.297496791929,
+"scheduledDate": "2026-09-19",
+"scheduledTime": "17:00:00",
+"estimatedArrival": null,
+"cancelledAt": null,
+"servicePrice": "349.00",
+"GST": "66.00",
+"convenianceCharges": "17.00",
+"discountAmount": "0.00",
+"totalAmount": "432.00",
+"status": "in-progress",
+"paymentStatus": "paid",
+"specialInstructions": "",
+"groupId": null,
+"estimatedDurationMinutes": null,
+"createdAt": "2026-09-19T10:05:54.000Z",
+"updatedAt": "2026-09-25T19:25:08.000Z",
+"deletedAt": null,
+"Service": {
+    "id": 21,
+    "categoryId": 5,
+    "name": "Electrician",
+    "slug": "electrician",
+    "description": "Switchboard, socket, fan",
+    "basePrice": "349.00",
+    "duration": 60,
+    "isActive": true,
+    "image": "https://picsum.photos/seed/electrician/200/150",
+    "metadata": {
+        "formFields": [
+            {
+                "key": "serviceType",
+                "type": "select",
+                "label": "Service Type",
+                "options": [
+                    "Switchboard Repair",
+                    "Socket Replacement",
+                    "Fan Installation",
+                    "Light Installation",
+                    "Short Circuit",
+                    "Wiring Work"
+                ],
+                "required": true
+            },
+            {
+                "key": "issueDescription",
+                "type": "textarea",
+                "label": "Issue Description",
+                "required": true,
+                "placeholder": "Describe the issue"
+            }
+        ],
+        "priceCalculation": {
+            "type": "fixed"
+        }
+    },
+    "createdAt": "2026-09-15T07:29:27.000Z",
+    "updatedAt": "2026-09-15T07:29:27.000Z",
+    "deletedAt": null,
+    "Category": {
+        "id": 5,
+        "name": "Home Repairs & Handyman",
+        "slug": "home-repairs-handyman",
+        "icon": "Hammer",
+        "description": "Electrician, plumber, carpenter",
+        "sortOrder": 5,
+        "isActive": true,
+        "image": "https://picsum.photos/seed/handyman/400/300",
+        "createdAt": "2026-09-15T07:29:27.000Z",
+        "updatedAt": "2026-09-15T07:29:27.000Z",
+        "deletedAt": null
+    }
+},
+"Job": {
+    "id": 1,
+    "bookingId": 2,
+    "workerId": 6,
+    "status": "in-progress",
+    "assignedAt": "2026-09-19T10:05:54.000Z",
+    "startedAt": "2026-09-25T19:25:08.000Z",
+    "completedAt": null,
+    "confirmationOtp": null,
+    "otpExpiry": null,
+    "workerLatitude": null,
+    "workerLongitude": null,
+    "userLatitude": null,
+    "userLongitude": null,
+    "beforePhotos": null,
+    "afterPhotos": null,
+    "notes": null,
+    "rating": null,
+    "feedback": null,
+    "createdAt": "2026-09-19T10:05:54.000Z",
+    "updatedAt": "2026-09-25T19:25:08.000Z",
+    "deletedAt": null,
+    "Worker": {
+        "id": 6,
+        "userId": 7,
+        "profession": "Electrician, Carpenter",
+        "experience": 10,
+        "description": "rrr",
+        "isVerified": true,
+        "rating": 0,
+        "totalJobs": 0,
+        "schedule": [],
+        "latitude": null,
+        "longitude": null,
+        "status": "inactive",
+        "createdAt": "2026-09-16T19:29:52.000Z",
+        "updatedAt": "2026-09-19T10:14:08.000Z",
+        "User": {
+            "id": 7,
+            "name": "Thanusha",
+            "mobile": "9494130830"
+        }
+    }
+},
+"Payment": {
+    "id": 2,
+    "bookingId": 2,
+    "amount": "432.00",
+    "currency": "INR",
+    "paymentMethod": "razorpay",
+    "status": "paid",
+    "transactionId": "pay_TdrAAAnnHovdwh",
+    "paidAt": "2026-09-19T10:06:43.000Z",
+    "razorpayOrderId": "order_Tdr9kMcBIvSWiE",
+    "razorpayPaymentId": "pay_TdrAAAnnHovdwh",
+    "razorpaySignature": "f59b3938c6db104226e77ee1d20b68a6250e7b226dd564d64976714ce0bef8a5",
+    "webhookStatus": "pending",
+    "gatewayResponse": {
+        "id": "order_Tdr9kMcBIvSWiE",
+        "notes": {
+            "userId": "2",
+            "bookingId": "2"
+        },
+        "amount": 43200,
+        "entity": "order",
+        "status": "created",
+        "receipt": "booking_2",
+        "attempts": 0,
+        "currency": "INR",
+        "offer_id": null,
+        "amount_due": 43200,
+        "created_at": 1789812373,
+        "amount_paid": 0,
+        "razorpay_signature": "f59b3938c6db104226e77ee1d20b68a6250e7b226dd564d64976714ce0bef8a5",
+        "razorpay_payment_id": "pay_TdrAAAnnHovdwh"
+    },
+    "createdAt": "2026-09-19T10:06:13.000Z",
+    "updatedAt": "2026-09-19T10:06:43.000Z"
+},
+"User": {
+    "id": 2,
+    "name": "Deva mani",
+    "mobile": "9494127627"
+}
 }

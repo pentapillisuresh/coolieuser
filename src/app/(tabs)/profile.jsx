@@ -361,6 +361,19 @@ export default function ProfileScreen() {
         >
           <Text style={{ color: "#FFF", fontWeight: "700" }}>Retry</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={handleLogout}
+          style={{
+            marginTop: 16,
+            paddingHorizontal: 20,
+            paddingVertical: 10,
+            backgroundColor: "#17381B",
+            borderRadius: 10,
+          }}
+        >
+          <Text style={{ color: "#FFF", fontWeight: "700" }}>Logout</Text>
+        </TouchableOpacity>
       </View>
     );
   }
