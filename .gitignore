@@ -44,3 +44,4 @@ app-example
 caches/*
 google-services.json
 GoogleService-Info.plist 
+*.json

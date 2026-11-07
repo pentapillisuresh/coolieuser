@@ -56,7 +56,7 @@ export default function AddEditAddressScreen() {
   };
 
   const handleSave = async () => {
-    if (!form.addressLine || !form.latitude || !form.longitude) {
+    if (!form.address || !form.latitude || !form.longitude) {
       Alert.alert('Required', 'Please pick a location on the map');
       return;
     }
@@ -184,7 +184,7 @@ export default function AddEditAddressScreen() {
         visible={showMap}
         onClose={() => setShowMap(false)}
         onSelect={handlePickLocation}
-        initialAddress={form.addressLine}
+        initialAddress={form.address}
       />
     </View>
   );

@@ -71,16 +71,12 @@ export default function OTPScreen() {
 
     setLoading(true);
 
-    console.log("phone::", phone);
-    console.log("otp::", otpCode);
-
     try {
       const res = await verifyOTP(phone, otpCode, "user");
-      console.log("otp verify res::", res);
+
       const token = res.token
       await storeToken(token)
 
-      SecureStore.setItemAsync("userData",JSON.stringify(res?.user));
       SecureStore.setItemAsync("userData",JSON.stringify(res?.user));
       SecureStore.setItemAsync("isLogin","true");
       const rrr=await getToken()

@@ -81,10 +81,6 @@ export default function HomeScreen() {
     return unsubscribe;
   }, []);
   
-//   // 4. Background & Terminated handler (Must be registered outside of components)
-// messaging().setBackgroundMessageHandler(async remoteMessage => {
-//   console.log('Message handled in the background!', remoteMessage);
-// });
 
   const registerUserDeviceToken=async ()=>{
     const deviceToken=await getFcmToken();

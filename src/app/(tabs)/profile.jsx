@@ -1,12 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import {View,Text,ScrollView,TouchableOpacity,Switch,Alert,StatusBar,ActivityIndicator,RefreshControl,Modal,Animated,Dimensions,TouchableWithoutFeedback} from "react-native";
+import {View,Text,ScrollView,TouchableOpacity,Image,Alert,StatusBar,ActivityIndicator,RefreshControl,Modal,Animated,Dimensions,TouchableWithoutFeedback} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { calendar, TrendingUp } from "lucide-react-native";
 import Icon from "react-native-vector-icons/Feather";
 import Icon2 from "react-native-vector-icons/MaterialIcons";
 import Icon3 from "react-native-vector-icons/FontAwesome5";
 import { getProfile } from "../../../services/api/user";
 import { logout } from "./../../../services/api/auth";
+import { extractPathFromUrl, getSignedReadUrl } from "../../../services/api/upload";
+import AddAddressSheet from "../../components/AddAddressSheet";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -176,7 +179,7 @@ function InfoRow({ label, value, icon }) {
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-
+  const [avatar, setAvatar] = useState(null); // local file URI OR signed URL
   const [notifEnabled, setNotifEnabled] = useState(true);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -185,8 +188,23 @@ export default function ProfileScreen() {
 
   // Sheet visibility
   const [showPersonal, setShowPersonal] = useState(false);
-  const [showAddresses, setShowAddresses] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showAddAddress, setShowAddAddress] = useState(false);
+  const [showAddresses, setShowAddresses] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(null);
+
+  // From the "Add New Address" button in the address sheet:
+  const handleAddNew = () => {
+    setEditingAddress(null);
+    setShowAddAddress(true);
+  };
+
+  // From an "Edit" button on an existing address:
+  const handleEdit = (addr) => {
+    setEditingAddress(addr);
+    setShowAddAddress(true);
+  };
+
 
   // ─── Fetch profile ──────────────────────────────────────
   const fetchProfile = useCallback(async () => {
@@ -194,7 +212,27 @@ export default function ProfileScreen() {
       setError(null);
       const res = await getProfile();
       const user = res?.data?.user || res?.data || res?.user || res;
+
       setProfile(user);
+      if (user.profileImage) {
+        // user.profileImage is a full GCS URL like:
+        // https://storage.googleapis.com/coolie_bucket/images/xxx.webp
+        const path = extractPathFromUrl(user.profileImage);
+
+      if (path) {
+        try {
+          const signed = await getSignedReadUrl(path);
+          setAvatar(signed?.url || user.profileImage);
+        } catch (signedErr) {
+          console.warn("Signed URL failed, using raw URL:", signedErr);
+          setAvatar(user.profileImage);
+        }
+      } else {
+        setAvatar(user.profileImage);
+      }
+    } else {
+      setAvatar(null);
+    }
     } catch (err) {
       console.error("Fetch profile error:", err);
       setError(err?.error || err?.message || "Failed to load profile");
@@ -214,7 +252,7 @@ export default function ProfileScreen() {
   };
 
   // ─── Logout ─────────────────────────────────────────────
-  const handleLogout = () => {
+  const handleUserLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
       {
@@ -222,6 +260,20 @@ export default function ProfileScreen() {
         style: "destructive",
         onPress: async () => {
           await logout();
+          router.replace("/login");
+        },
+      },
+    ]);
+  };
+
+  const handleLogout = () => {
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          // await logout();
           router.replace("/login");
         },
       },
@@ -437,8 +489,12 @@ export default function ProfileScreen() {
                 }}
               >
                 {profile.profileImage ? (
-                  <Icon name="user" size={36} color="#FFFFFF" />
-                ) : (
+                  <Image
+                    source={{ uri: avatar }}
+                    style={{ width: "100%", height: "100%" }}
+                    contentFit="cover"
+                    transition={200}
+                  />                ) : (
                   <Text
                     style={{
                       fontSize: 36,
@@ -450,7 +506,7 @@ export default function ProfileScreen() {
                   </Text>
                 )}
               </View>
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 onPress={() => router.push("/profile/edit")}
                 style={{
                   position: "absolute",
@@ -467,7 +523,7 @@ export default function ProfileScreen() {
                 }}
               >
                 <Icon name="edit-2" size={14} color="#FFFFFF" />
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 22, fontWeight: "900", color: "#FFFFFF" }}>
@@ -512,7 +568,7 @@ export default function ProfileScreen() {
               {
                 label: "Total Bookings",
                 value: totalBookings,
-                icon: "award",
+                icon: "book-online",
                 color: "#F59E0B",
               },
               {
@@ -524,7 +580,7 @@ export default function ProfileScreen() {
               {
                 label: "Member Since",
                 value: memberSince,
-                icon: "calendar",
+                icon: "calendar-today",
                 color: "#60A5FA",
               },
             ].map((stat, i) => (
@@ -694,7 +750,7 @@ export default function ProfileScreen() {
 
         {/* Logout */}
         <TouchableOpacity
-          onPress={handleLogout}
+          onPress={handleUserLogout}
           activeOpacity={0.8}
           style={{ marginHorizontal: 20, marginTop: 24 }}
         >
@@ -713,7 +769,7 @@ export default function ProfileScreen() {
           >
             <Icon name="log-out" size={20} color="#DC2626" />
             <Text style={{ fontSize: 16, fontWeight: "800", color: "#DC2626" }}>
-              Logout
+             User Logout
             </Text>
           </View>
         </TouchableOpacity>
@@ -763,7 +819,7 @@ export default function ProfileScreen() {
         <TouchableOpacity
           onPress={() => {
             setShowPersonal(false);
-            router.push("/profile/edit");
+            router.push("../editUserDetails");
           }}
           style={{
             marginTop: 20,
@@ -895,10 +951,7 @@ export default function ProfileScreen() {
         )}
 
         <TouchableOpacity
-          onPress={() => {
-            setShowAddresses(false);
-            router.push("/address/add");
-          }}
+          onPress={handleAddNew}
           style={{
             marginTop: 10,
             paddingVertical: 14,
@@ -1071,6 +1124,20 @@ export default function ProfileScreen() {
           Last updated: October 2026
         </Text>
       </BottomSheet>
+      {/* Add / Edit Address Sheet */}
+      <AddAddressSheet
+        visible={showAddAddress}
+        onClose={() => {
+          setShowAddAddress(false);
+          setEditingAddress(null);
+        }}
+        onSuccess={async (newAddress) => {
+          // Refresh the address list / profile
+          console.log("New address:", newAddress);
+          await fetchProfile(); // or fetchAddresses()
+        }}
+        editAddress={editingAddress}
+      />
     </View>
   );
 }

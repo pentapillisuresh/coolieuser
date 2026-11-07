@@ -75,10 +75,7 @@ export default function ArrivedScreen() {
       );
       return;
     }
-    router.push({
-      pathname: "/booking/in-progress",
-      params: { jobId: String(jobData.id) },
-    });
+    router.back();
   };
 
   if (loading) {

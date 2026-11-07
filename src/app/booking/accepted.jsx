@@ -223,7 +223,7 @@ export default function AcceptedScreen() {
     };
   
     // Only stream when the worker is on the way or has arrived
-    if (["on-the-way", "arrived"].includes(booking?.status)) {
+    if (["on-the-way"].includes(booking?.status)) {
       startWatching();
     }
   
@@ -262,9 +262,7 @@ export default function AcceptedScreen() {
     try {
       const loc = await getCurrentLocation();
       const jobUpdate = await arriveAtJob(
-        booking.Job.id,
-        loc?.latitude || booking.latitude,
-        loc?.longitude || booking.longitude
+        booking.Job.id
       );
 
       if (jobUpdate?.success) {

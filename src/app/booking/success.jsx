@@ -75,17 +75,6 @@ export default function SuccessScreen() {
         throw new Error("Unable to fetch booking details.");
       }
 
-      // API response:
-      // {
-      //   success: true,
-      //   data: {
-      //      id: 7,
-      //      Service: {...},
-      //      User: {...},
-      //      ...
-      //   }
-      // }
-
       setBooking(response.data);
       setBookingStatus(response.data.paymentStatus);
     } catch (error) {

@@ -208,7 +208,7 @@ export default function InProgressScreen() {
     try {
       setCompleting(true);
       const verifyCompletionJob = await generateCompleteOTP(jobId);
-      console.log("verifyCompletionJob::",verifyCompletionJob)
+
       // setJob(verifyCompletionJob || { ...job, status: "completed" });
       router.replace({
         pathname: "/booking/work-otp",

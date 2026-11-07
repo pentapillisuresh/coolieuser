@@ -349,9 +349,8 @@ export default function ServicesScreen() {
             {/* Book button - No Gradient */}
             <TouchableOpacity
               onPress={() => { 
-                console.log("services::::",svc?.basePrice)
                 router.push({
-                  pathname: "/booking/details",
+                  pathname: "booking/details",
                   params: {
                     categoryId: String(category?.id ?? ""),
                     categoryName: category?.name ?? "",

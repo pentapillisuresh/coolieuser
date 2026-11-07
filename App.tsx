@@ -10,8 +10,8 @@ import { SocketProvider } from './src/context/SocketContext';
 export default function MobileRoot() {
   return (
     <SocketProvider>
-      <ScreenViewTracker />
-      <App />
+        <ScreenViewTracker />
+        <App />
     </SocketProvider>
   );
 }

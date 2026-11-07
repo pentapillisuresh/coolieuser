@@ -9,7 +9,6 @@ import { reverseGeocode, geocodeAddress } from '../../services/api/location';
 const LocationPickerModal = ({ visible, onClose, onSelect, initialAddress }) => {
   const insets = useSafeAreaInsets();
   const mapRef = useRef(null);
-
   const [region, setRegion] = useState({
     latitude: 17.6868,
     longitude: 83.2185,
@@ -24,8 +23,9 @@ const LocationPickerModal = ({ visible, onClose, onSelect, initialAddress }) => 
   // Fetch current location when modal opens
   useEffect(() => {
     if (!visible) return;
-
     (async () => {
+      console.log("address effect::",initialAddress)
+      setSearchQuery(initialAddress)
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') return;
       const loc = await Location.getCurrentPositionAsync({});

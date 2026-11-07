@@ -1,12 +1,12 @@
 import client from './client';
 
-export const createRazorpayOrder = (bookingId: number) =>
-  client.post(`/payments/booking/${bookingId}/order`);
+export const createRazorpayOrder = (cartId: number) =>
+  client.post(`/payments/booking/${cartId}/order`);
 
 export const verifyPayment = (
-  bookingId: number,
+  cartId: number,
   payload: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }
-) => client.post(`/payments/booking/${bookingId}/verify`, payload);
+) => client.post(`/payments/booking/${cartId}/verify`, payload);
 
 export const getPaymentStatus = (bookingId: number) =>
   client.get(`/payments/booking/${bookingId}/status`);

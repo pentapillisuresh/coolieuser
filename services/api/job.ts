@@ -1,7 +1,7 @@
 import client from './client';
 
-export const arriveAtJob = (jobId: number, latitude: number, longitude: number) =>
-  client.put(`/jobs/${jobId}/arrive`, { latitude, longitude });
+export const arriveAtJob = (jobId: number) =>
+  client.put(`/jobs/${jobId}/arrive`);
 
 export const getJobById = (jobId: number) =>
   client.get(`/jobs/${jobId}/byworker`);
