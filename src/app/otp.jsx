@@ -24,33 +24,33 @@ export default function OTPScreen() {
     return () => clearInterval(t);
   }, []);
 
-  // Auto-fill simulation  
-  useEffect(() => {
-    if (!OTP) return;
+  // useEffect(() => {
+  //   if (!OTP) return;
   
-    const otpString = String(OTP).trim();
+  //   const otpString = String(OTP).trim();
   
-    setAutoFilling(true);
+  //   setAutoFilling(true);
   
-    const timers = otpString.split("").map((digit, index) => {
-      return setTimeout(() => {
-        setOtp((prev) => {
-          const next = [...prev];
-          next[index] = digit;
-          return next;
-        });
-      }, index * 120);
-    });
+  //   const timers = otpString.split("").map((digit, index) => {
+  //     return setTimeout(() => {
+  //       setOtp((prev) => {
+  //         const next = [...prev];
+  //         next[index] = digit;
+  //         return next;
+  //       });
+  //     }, index * 120);
+  //   });
   
-    const doneTimer = setTimeout(() => {
-      setAutoFilling(false);
-    }, otpString.length * 120 + 200);
+  //   const doneTimer = setTimeout(() => {
+  //     setAutoFilling(false);
+  //   }, otpString.length * 120 + 200);
   
-    return () => {
-      timers.forEach(clearTimeout);
-      clearTimeout(doneTimer);
-    };
-  }, [OTP]);
+  //   return () => {
+  //     timers.forEach(clearTimeout);
+  //     clearTimeout(doneTimer);
+  //   };
+  // }, [OTP]);
+
     const handleChange = (text, index) => {
     const newOtp = [...otp];
     newOtp[index] = text.slice(-1);

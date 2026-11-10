@@ -1,15 +1,5 @@
 import { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  ImageBackground,
-  Dimensions,
-  Platform,
-} from "react-native";
+import {View,Text,TextInput,TouchableOpacity,ScrollView,Alert,ImageBackground,Dimensions,Platform} from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
@@ -18,6 +8,8 @@ import { Camera, User, Mail, ArrowRight, Check } from "lucide-react-native";
 import {uploadSingleFile} from '../../services/api/upload'
 const { height } = Dimensions.get("window");
 import {updateProfile} from '../../services/api/user'
+import * as SecureStore from 'expo-secure-store';
+
 export default function ProfileSetupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -157,9 +149,13 @@ export default function ProfileSetupScreen() {
   
       // Call the update API
       const response = await updateProfile(updateData);
-      // if (response.success && response.data) {
-      //   if (setUser) setUser(response.data);
-      // }
+
+      if (response.success && response.data) {
+        console.log("user rrr")
+
+        SecureStore.setItemAsync("userData",JSON.stringify(response?.data));
+        SecureStore.setItemAsync("isLogin","true");
+      }
   
       Alert.alert('Success', 'Profile updated successfully');
       router.replace('/(tabs)/home');

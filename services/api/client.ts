@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 import { getToken, removeToken } from '../../src/utils/storage';
 
 const apiUrl = Constants.expoConfig?.extra?.apiUrl || 'https://api.coolieglobal.com/api';
-// const apiUrl = Constants.expoConfig?.extra?.apiUrl || 'http://192.168.0.5:3000/api';
+// const apiUrl = Constants.expoConfig?.extra?.apiUrl || 'http://192.168.0.12:3000/api';
 
 const client = axios.create({
   baseURL: apiUrl,

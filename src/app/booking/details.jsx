@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Platform,
   KeyboardAvoidingView, StatusBar, ActivityIndicator,
@@ -102,7 +102,7 @@ const getDateString = (label) => {
 };
 
 // ─── Quantity Picker ────────────────────────────────────────────
-function QuantityPicker({ value, onChange, min = 1, max = 10, unitPrice = 0 }) {
+function QuantityPicker({ value, onChange, min = 1, max = 10, unitPrice = 0, label = "Quantity" }) {
   const dec = () => value > min && onChange(value - 1);
   const inc = () => value < max && onChange(value + 1);
   const lineTotal = Math.max(0, (unitPrice || 0) * value);
@@ -110,19 +110,14 @@ function QuantityPicker({ value, onChange, min = 1, max = 10, unitPrice = 0 }) {
   return (
     <View
       style={{
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        backgroundColor: "#F3F8EF",
-        borderRadius: 14,
-        padding: 12,
-        borderWidth: 1.5,
-        borderColor: "#E5E7EB",
+        flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+        backgroundColor: "#F3F8EF", borderRadius: 14, padding: 12,
+        borderWidth: 1.5, borderColor: "#E5E7EB",
       }}
     >
       <View style={{ flex: 1 }}>
         <Text style={{ fontSize: 14, fontWeight: "800", color: "#1F2937" }}>
-          Quantity
+          {label}
         </Text>
         <Text style={{ fontSize: 12, color: "#6B7280", marginTop: 2 }}>
           ₹{unitPrice.toFixed(0)} × {value} ={" "}
@@ -177,7 +172,6 @@ export default function BookingDetailsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams();
-  const categoryId = params.categoryId?.toString() || "";
   const categoryName = params.categoryName?.toString() || "";
   const serviceId = params.serviceId?.toString() || "";
 
@@ -213,13 +207,80 @@ export default function BookingDetailsScreen() {
     [service, formData],
   );
 
-  const priceCalcType = service?.metadata?.priceCalculation?.type;
+  const priceCalc = service?.metadata?.priceCalculation;
+  const priceCalcType = priceCalc?.type;
   const perSqftRate =
-    priceCalcType === "per_sqft" || priceCalcType === "per_sqft_from_option"
-      ? service?.metadata?.priceCalculation?.rate
+    priceCalcType === "per_sqft" ||
+    priceCalcType === "per_sqft_from_option" ||
+    priceCalcType === "per_sqft_gender"
+      ? priceCalc?.rate
       : null;
 
+  // For labour services, resolve the actual sub-calculation to label the picker
+  const resolvedCalc = useMemo(() => {
+    if (!priceCalc) return null;
+    if (priceCalc.type === "conditional") {
+      return priceCalc.cases?.[formData?.billingBasis] || null;
+    }
+    return priceCalc;
+  }, [priceCalc, formData?.billingBasis]);
+
+  const quantityLabel = useMemo(() => {
+    if (resolvedCalc?.type === "hourly_gender") return "Hours";
+    if (resolvedCalc?.type === "daily_gender") return "Days";
+    return "Quantity";
+  }, [resolvedCalc?.type]);
+
+  const quantityMax = useMemo(() => {
+    if (quantityLabel === "Days") return 30;
+    if (quantityLabel === "Hours") return 24;
+    return 10;
+  }, [quantityLabel]);
+
   const isBusy = savingAddress || addingToCart;
+
+  // ── Field visibility — inside the component so it sees formData ──
+  const isFieldVisible = useCallback(
+    (field) => {
+      const basis = formData?.billingBasis;
+
+      if (field.key === "workerHours") return basis === "Hourly";
+      if (field.key === "workerDays") return basis === "Daily";
+      if (field.key === "area") {
+        // area is used by many per-sqft services without a basis selector.
+        // Only hide it when a basis is set and doesn't match.
+        return !basis || basis === "Area (sq ft)";
+      }
+
+      return true;
+    },
+    [formData?.billingBasis],
+  );
+
+  // ── Validation — inside the component ──────────────────────
+  const validateLabour = useCallback(() => {
+    const fields = service?.metadata?.formFields || [];
+    const hasGender = fields.some((f) => f.key === "workerGender");
+    const hasBasis = fields.some((f) => f.key === "billingBasis");
+
+    if (hasGender && !formData.workerGender) {
+      return "Please select worker gender.";
+    }
+    if (!hasBasis) return null;
+
+    const basis = formData.billingBasis;
+    if (!basis) return "Please select a billing basis.";
+    if (basis === "Hourly" && !formData.workerHours) {
+      return "Please enter number of hours.";
+    }
+    if (basis === "Daily" && !formData.workerDays) {
+      return "Please enter number of days.";
+    }
+    if (basis === "Area (sq ft)" && !formData.area) {
+      return "Please enter area.";
+    }
+    return null;
+  }, [service, formData]);
 
   // ── Init ───────────────────────────────────────────────────
   useEffect(() => {
@@ -284,7 +345,18 @@ export default function BookingDetailsScreen() {
   };
 
   const handleFieldChange = (key, value) => {
-    setFormData((prev) => ({ ...(prev || {}), [key]: value }));
+    setFormData((prev) => {
+      const next = { ...(prev || {}), [key]: value };
+
+      // When billingBasis changes, clear the quantity fields that no longer apply
+      if (key === "billingBasis") {
+        if (value !== "Hourly") next.workerHours = "";
+        if (value !== "Daily") next.workerDays = "";
+        if (value !== "Area (sq ft)") next.area = "";
+      }
+
+      return next;
+    });
   };
 
   const handleBookingTypeChange = (val) => {
@@ -315,9 +387,15 @@ export default function BookingDetailsScreen() {
 
   // ── Validate + add to cart + navigate ──────────────────────
   const handleNext = async () => {
-    // 1. Validate dynamic form fields
+    // 1. Standard required-field validation
     const fields = service?.metadata?.formFields || [];
-    const requiredFields = fields.filter((f) => f.required);
+
+    // Exclude conditional quantity fields — those are validated by validateLabour
+    const conditionalKeys = ["workerHours", "workerDays", "area"];
+    const requiredFields = fields.filter(
+      (f) => f.required && !conditionalKeys.includes(f.key),
+    );
+
     const missingFields = requiredFields.filter((field) => {
       const v = formData?.[field.key];
       if (v === null || v === undefined) return true;
@@ -333,7 +411,23 @@ export default function BookingDetailsScreen() {
       return;
     }
 
-    // 2. Resolve address
+    // 2. Labour-specific validation
+    const labourError = validateLabour();
+    if (labourError) {
+      Alert.alert("Incomplete", labourError);
+      return;
+    }
+
+    // 3. Guard against zero-priced cart lines
+    if (liveUnitPrice <= 0) {
+      Alert.alert(
+        "Price not ready",
+        "Please complete the required options so the price can be calculated.",
+      );
+      return;
+    }
+
+    // 4. Resolve address
     let finalAddress, finalLat, finalLng, addressId = null;
 
     try {
@@ -344,11 +438,12 @@ export default function BookingDetailsScreen() {
         }
 
         setSavingAddress(true);
+        console.log("rrr::",manualAddress);
         const created = await createAddress({
           label: "Other",
           address: manualAddress.address,
-          latitude: manualAddress.latitude,
-          longitude: manualAddress.longitude,
+          latitude: Number(manualAddress.latitude.toFixed(4)),
+          longitude: Number(manualAddress.longitude.toFixed(4)),
           isDefault: addresses.length === 0,
         });
         addressId = created.data.id;
@@ -377,7 +472,7 @@ export default function BookingDetailsScreen() {
       setSavingAddress(false);
     }
 
-    // 3. Add item to cart
+    // 5. Add item to cart
     const scheduledDate = getDateString(selectedDate);
     const scheduledTime = convertToMySQLTime(selectedTime);
 
@@ -461,6 +556,7 @@ export default function BookingDetailsScreen() {
   }
 
   const fields = service?.metadata?.formFields || [];
+  const visibleFields = fields.filter(isFieldVisible);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F3F8EF" }}>
@@ -499,7 +595,6 @@ export default function BookingDetailsScreen() {
             </Text>
           </View>
 
-          {/* Price pill + per-sqft hint, stacked vertically */}
           <View style={{ alignItems: "flex-end" }}>
             <View
               style={{
@@ -529,7 +624,6 @@ export default function BookingDetailsScreen() {
             ) : null}
           </View>
 
-          {/* Cart badge */}
           <TouchableOpacity
             onPress={() => router.push("/cart")}
             style={{
@@ -707,9 +801,9 @@ export default function BookingDetailsScreen() {
           {/* ─── Dynamic Form Fields ────────────────────────── */}
           <View style={[cardStyle, { gap: 14 }]}>
             <Text style={sectionTitle}>Service Information</Text>
-            {fields.length > 0 ? (
-              fields.map((field) => {
-                const value = formData[field.key] || "";
+            {visibleFields.length > 0 ? (
+              visibleFields.map((field) => {
+                const value = formData[field.key] ?? "";
                 return (
                   <View key={field.key}>
                     <View
@@ -762,9 +856,7 @@ export default function BookingDetailsScreen() {
                           return (
                             <TouchableOpacity
                               key={optValue}
-                              onPress={() =>
-                                handleFieldChange(field.key, optValue)
-                              }
+                              onPress={() => handleFieldChange(field.key, optValue)}
                               style={{
                                 paddingVertical: 10,
                                 borderBottomWidth: 1,
@@ -776,9 +868,7 @@ export default function BookingDetailsScreen() {
                               }}
                             >
                               <Text
-                                style={{
-                                  fontSize: 14, color: "#1F2937", flex: 1,
-                                }}
+                                style={{ fontSize: 14, color: "#1F2937", flex: 1 }}
                               >
                                 {optValue}
                               </Text>
@@ -881,7 +971,7 @@ export default function BookingDetailsScreen() {
                           field.type === "number" ? "numeric" : "default"
                         }
                         multiline={field.type === "textarea"}
-                        value={value}
+                        value={String(value)}
                         onChangeText={(t) => handleFieldChange(field.key, t)}
                       />
                     )}
@@ -897,13 +987,16 @@ export default function BookingDetailsScreen() {
 
           {/* ─── Quantity ───────────────────────────────────── */}
           <View style={cardStyle}>
-            <Text style={sectionTitle}>How many do you need?</Text>
+            <Text style={sectionTitle}>
+              How many {quantityLabel === "Quantity" ? "do" : quantityLabel.toLowerCase() + " do"} you need?
+            </Text>
             <QuantityPicker
               value={quantity}
               onChange={setQuantity}
               min={1}
-              max={10}
+              max={quantityMax}
               unitPrice={liveUnitPrice}
+              label={quantityLabel}
             />
           </View>
 

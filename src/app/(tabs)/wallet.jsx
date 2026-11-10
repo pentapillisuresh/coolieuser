@@ -619,7 +619,7 @@ export default function WalletScreen() {
           </View>
         )}
 
-        {/* Referral card */}
+        {/* Referral card
         <TouchableOpacity
           style={{ margin: 20, borderRadius: 20, overflow: "hidden" }}
           activeOpacity={0.9}
@@ -683,7 +683,7 @@ export default function WalletScreen() {
               color="rgba(255,255,255,0.6)"
             />
           </View>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         <View style={{ height: 24 }} />
       </ScrollView>

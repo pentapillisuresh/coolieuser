@@ -147,7 +147,7 @@ const userDetails=await getUser();
     const getData = async () => {
       try {
         const userDetails = await SecureStore.getItemAsync("userData");
-
+console.log("rrr::",userDetails)
         if (userDetails) {
           setUserData(JSON.parse(userDetails));
         }
